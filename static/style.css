@@ -1,0 +1,35 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+h2 {
+    margin-bottom: 20px;
+}
+
+form label {
+    font-weight: bold;
+}
+
+form input, form select, form textarea {
+    margin-bottom: 10px;
+}
+
+.btn {
+    margin-right: 5px;
+}
+
+table {
+    background-color: white;
+}
+
+.error {
+    color: red;
+    font-weight: bold;
+}
+
+.container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+}

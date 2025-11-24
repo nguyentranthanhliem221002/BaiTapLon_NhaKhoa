@@ -1,0 +1,50 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Thêm lịch hẹn{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 600px;">
+    <h2 class="mb-4">Thêm lịch hẹn mới</h2>
+
+    <form method="POST" action="{{ url_for('add_appointment') }}">
+        <!-- Chọn bệnh nhân -->
+        <div class="mb-3">
+            <label for="patient_id" class="form-label">Bệnh nhân</label>
+            <select class="form-select" id="patient_id" name="patient_id" required>
+                <option value="" disabled selected>Chọn bệnh nhân</option>
+                {% for patient in patients %}
+                <option value="{{ patient.id }}">{{ patient.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Chọn bác sĩ -->
+        <div class="mb-3">
+            <label for="doctor_id" class="form-label">Bác sĩ</label>
+            <select class="form-select" id="doctor_id" name="doctor_id" required>
+                <option value="" disabled selected>Chọn bác sĩ</option>
+                {% for doctor in doctors %}
+                <option value="{{ doctor.id }}">{{ doctor.name }} ({{ doctor.specialty }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Ngày giờ hẹn -->
+        <div class="mb-3">
+            <label for="appointment_date" class="form-label">Ngày hẹn</label>
+            <input type="datetime-local" class="form-control" id="appointment_date" name="appointment_date" required>
+        </div>
+
+        <!-- Mô tả -->
+        <div class="mb-3">
+            <label for="description" class="form-label">Mô tả</label>
+            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-success">Thêm lịch hẹn</button>
+            <a href="{{ url_for('appointments') }}" class="btn btn-secondary">Hủy</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

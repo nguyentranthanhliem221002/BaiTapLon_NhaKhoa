@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Phòng khám Nha khoa{% endblock %}</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- CSS riêng -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="bg-light shadow-sm p-3 mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+        <!-- Logo / tên phòng khám -->
+        <div class="d-flex align-items-center">
+            <h1 class="h3 mb-0 me-4">Phòng Khám Nha Khoa</h1>
+        </div>
+
+        <!-- Menu ở giữa -->
+        {% if session.get('user') %}
+        <nav class="d-flex align-items-center flex-grow-1 justify-content-center">
+            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('dashboard') }}">Trang chủ</a>
+            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('patients') }}">Bệnh nhân</a>
+            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('doctors') }}">Bác sĩ</a>
+            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn</a>
+        </nav>
+        {% endif %}
+
+        <!-- Đăng nhập / Đăng xuất bên phải -->
+        <div class="d-flex align-items-center">
+            {% if session.get('user') %}
+                <span class="me-2 mb-1 text-dark">Xin chào, <strong>{{ session['user'] }}</strong></span>
+                <a class="btn btn-dark btn-sm mb-1" href="{{ url_for('logout') }}">Đăng xuất</a>
+            {% else %}
+                <a class="btn btn-outline-dark btn-sm me-1 mb-1" href="{{ url_for('login') }}">Đăng nhập</a>
+                <a class="btn btn-dark btn-sm mb-1" href="{{ url_for('register') }}">Đăng ký</a>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<main class="container">
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="bg-light text-center py-3 mt-4">
+    <p>© 2025 - Phòng khám Nha khoa - Flask Project</p>
+</footer>
+
+<!-- Bootstrap JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

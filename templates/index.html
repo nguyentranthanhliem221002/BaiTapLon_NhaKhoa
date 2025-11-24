@@ -1,0 +1,25 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Trang chủ - Phòng khám Nha khoa{% endblock %}
+
+{% block content %}
+<div class="container text-center mt-5" style="max-width: 700px;">
+    <h1 class="display-4 mb-4">Chào mừng đến với Hệ thống Phòng khám Nha khoa</h1>
+
+    {% if session.get('user') %}
+        <p class="lead">Xin chào, <strong>{{ session['user'] }}</strong></p>
+<!--        <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">-->
+<!--            <a class="btn btn-primary btn-lg" href="{{ url_for('patients') }}">Danh sách bệnh nhân</a>-->
+<!--            <a class="btn btn-secondary btn-lg" href="{{ url_for('appointments') }}">Danh sách lịch hẹn</a>-->
+<!--            <a class="btn btn-info btn-lg" href="{{ url_for('doctors') }}">Danh sách bác sĩ</a>-->
+<!--        </div>-->
+
+    {% else %}
+        <p class="lead">Vui lòng đăng nhập để quản lý hệ thống</p>
+        <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">
+            <a class="btn btn-success btn-lg" href="{{ url_for('login') }}">Đăng nhập</a>
+            <a class="btn btn-info btn-lg" href="{{ url_for('register') }}">Đăng ký</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
