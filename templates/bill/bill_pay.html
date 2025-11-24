@@ -1,0 +1,16 @@
+<h2>Thanh toán phiếu khám #{{ bill.id }}</h2>
+<p>Bệnh nhân: {{ bill.patient_name }}</p>
+<p>Bác sĩ: {{ bill.doctor_name }}</p>
+<p>Mô tả: {{ bill.description }}</p>
+<p>Số tiền: {{ bill.amount }}</p>
+
+<form method="POST">
+    <label>Chọn phương thức thanh toán:</label>
+    <select name="payment_method">
+        <option value="cash">Tiền mặt</option>
+        <option value="momo">Momo</option>
+    </select>
+    <button type="submit">Thanh toán</button>
+</form>
+
+<a href="{{ url_for('bills') }}">Quay lại</a>

@@ -2,6 +2,7 @@
 
 {% block content %}
 <h2>Danh sách bệnh nhân</h2>
+<a class="btn btn-success mb-3" href="/patient/add">+ Thêm bệnh nhân</a>
 
 <!-- Form tìm kiếm -->
 <form method="GET" action="{{ url_for('patients') }}" class="mb-3 row g-2">
@@ -21,7 +22,6 @@
     </div>
 </form>
 
-<a class="btn btn-success mb-3" href="/patient/patient_add">+ Thêm bệnh nhân</a>
 
 <table class="table table-striped table-bordered">
     <thead class="table-dark">
@@ -43,8 +43,8 @@
             <td>{{ p.phone }}</td>
             <td>{{ p.address }}</td>
             <td>
-                <a class="btn btn-primary btn-sm" href="/patient/patient_edit/{{ p.id }}">Sửa</a>
-                <a class="btn btn-danger btn-sm" href="/patient/patient_delete/{{ p.id }}" onclick="return confirm('Xóa bệnh nhân?')">Xóa</a>
+                <a class="btn btn-primary btn-sm" href="/patient/edit/{{ p.id }}">Sửa</a>
+                <a class="btn btn-danger btn-sm" href="/patient/delete/{{ p.id }}" onclick="return confirm('Xóa bệnh nhân?')">Xóa</a>
             </td>
         </tr>
         {% endfor %}

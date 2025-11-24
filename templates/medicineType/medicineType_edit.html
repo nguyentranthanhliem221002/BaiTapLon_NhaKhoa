@@ -1,0 +1,14 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<h2>Sửa loại thuốc</h2>
+
+<form method="POST" class="mt-3">
+    <div class="mb-3">
+        <label for="name" class="form-label">Tên loại thuốc</label>
+        <input type="text" class="form-control" id="name" name="name" value="{{ type_obj.name }}" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Cập nhật</button>
+    <a href="{{ url_for('medicine_types') }}" class="btn btn-secondary">Hủy</a>
+</form>
+{% endblock %}

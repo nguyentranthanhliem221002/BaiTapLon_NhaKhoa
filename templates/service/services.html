@@ -1,0 +1,45 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Danh sách dịch vụ{% endblock %}
+
+{% block content %}
+<h2>Dịch vụ</h2>
+<a href="{{ url_for('add_service_route') }}" class="btn btn-success mb-3">+ Thêm dịch vụ</a>
+
+<form method="GET" action="{{ url_for('services') }}" class="mb-3 row g-2">
+    <div class="col-auto">
+        <input type="text" name="keyword" class="form-control" placeholder="Nhập từ khóa" value="{{ request.args.get('keyword','') }}">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+        <a href="{{ url_for('services') }}" class="btn btn-secondary">Xóa</a>
+    </div>
+</form>
+
+
+<table class="table table-striped table-bordered">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Tên</th>
+            <th>Loại</th>
+            <th>Giá</th>
+            <th>Hành động</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in services %}
+        <tr>
+            <td>{{ s.id }}</td>
+            <td>{{ s.name }}</td>
+            <td>{{ s.type_name }}</td>
+            <td>{{ s.price }}</td>
+            <td>
+                <a href="{{ url_for('edit_service', id=s.id) }}" class="btn btn-primary btn-sm">Sửa</a>
+                <a href="{{ url_for('edit_service', id=s.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Xóa dịch vụ?')">Xóa</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Danh sách thuốc{% endblock %}
+
+{% block content %}
+<h2>Thuốc</h2>
+<a href="{{ url_for('add_medicine_route') }}" class="btn btn-success mb-3">+ Thêm thuốc</a>
+
+<form method="GET" action="{{ url_for('medicines') }}" class="mb-3 row g-2">
+    <div class="col-auto">
+        <input type="text" name="keyword" class="form-control" placeholder="Tìm theo tên" value="{{ request.args.get('keyword','') }}">
+    </div>
+    <div class="col-auto">
+        <select name="type_id" class="form-select">
+            <option value="">-- Chọn loại thuốc --</option>
+            {% for t in types %}
+                <option value="{{ t.id }}" {% if request.args.get('type_id') == t.id|string %}selected{% endif %}>
+                    {{ t.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+        <a href="{{ url_for('medicines') }}" class="btn btn-secondary">Xóa</a>
+    </div>
+</form>
+
+
+<table class="table table-striped table-bordered">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Tên</th>
+            <th>Loại</th>
+            <th>Giá</th>
+            <th>Hành động</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for m in medicines %}
+        <tr>
+            <td>{{ m.id }}</td>
+            <td>{{ m.name }}</td>
+            <td>{{ m.type_name }}</td>
+            <td>{{ m.price }}</td>
+            <td>
+                <a href="{{ url_for('edit_medicine', id=m.id) }}" class="btn btn-primary btn-sm">Sửa</a>
+                <a href="{{ url_for('delete_medicine', id=m.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Xóa thuốc?')">Xóa</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

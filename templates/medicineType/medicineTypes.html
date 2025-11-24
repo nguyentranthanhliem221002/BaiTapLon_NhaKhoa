@@ -1,0 +1,42 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<h2>Danh sách loại thuốc</h2>
+<a class="btn btn-success mb-3" href="{{ url_for('add_medicine_type_route') }}">+ Thêm loại thuốc</a>
+
+<!-- Form tìm kiếm -->
+<form method="GET" action="{{ url_for('medicine_types') }}" class="mb-3 row g-2">
+    <div class="col-auto">
+        <input type="text" name="keyword" class="form-control" placeholder="Nhập từ khóa" value="{{ request.args.get('keyword','') }}">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+        <a href="{{ url_for('medicine_types') }}" class="btn btn-secondary">Xóa</a>
+    </div>
+</form>
+
+
+<!-- Bảng hiển thị loại thuốc -->
+<table class="table table-striped table-bordered">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Tên loại thuốc</th>
+            <th>Hành động</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in types %}
+        <tr>
+            <td>{{ t.id }}</td>
+            <td>{{ t.name }}</td>
+            <td>
+                <!-- Nếu muốn edit sau này -->
+                 <a class="btn btn-primary btn-sm" href="{{ url_for('edit_medicine_type_route', id=t.id) }}">Sửa</a>
+                <a class="btn btn-danger btn-sm" href="{{ url_for('delete_medicine_type_route', id=t.id) }}" onclick="return confirm('Xóa loại thuốc?')">Xóa</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

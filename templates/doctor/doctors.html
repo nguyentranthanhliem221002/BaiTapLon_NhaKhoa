@@ -2,6 +2,7 @@
 
 {% block content %}
 <h2>Danh sách bác sĩ</h2>
+<a class="btn btn-success mb-3" href="/doctor/add">+ Thêm bác sĩ</a>
 
 <!-- Form tìm kiếm -->
 <form method="GET" action="{{ url_for('doctors') }}" class="mb-3 row g-2">
@@ -21,7 +22,6 @@
     </div>
 </form>
 
-<a class="btn btn-success mb-3" href="/doctor/doctor_add">+ Thêm bác sĩ</a>
 
 <table class="table table-striped table-bordered">
     <thead class="table-dark">
@@ -41,8 +41,8 @@
             <td>{{ d.specialty }}</td>
             <td>{{ d.phone }}</td>
             <td>
-                <a class="btn btn-primary btn-sm" href="/doctor/doctor_edit/{{ d.id }}">Sửa</a>
-                <a class="btn btn-danger btn-sm" href="/doctor/doctor_delete/{{ d.id }}" onclick="return confirm('Xóa bác sĩ?')">Xóa</a>
+                <a class="btn btn-primary btn-sm" href="/doctor/edit/{{ d.id }}">Sửa</a>
+                <a class="btn btn-danger btn-sm" href="/doctor/delete/{{ d.id }}" onclick="return confirm('Xóa bác sĩ?')">Xóa</a>
             </td>
         </tr>
         {% endfor %}

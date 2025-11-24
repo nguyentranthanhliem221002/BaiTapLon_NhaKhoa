@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Danh sách loại dịch vụ</h2>
+    <a href="{{ url_for('add_service_type') }}" class="btn btn-primary mb-2">Thêm loại dịch vụ</a>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tên loại</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for type in types %}
+            <tr>
+                <td>{{ type.id }}</td>
+                <td>{{ type.name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -15,18 +15,37 @@
     <div class="container d-flex justify-content-between align-items-center">
         <!-- Logo / tên phòng khám -->
         <div class="d-flex align-items-center">
-            <h1 class="h3 mb-0 me-4">Phòng Khám Nha Khoa</h1>
+            <h1 class="h3 mb-0 me-4"><a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('dashboard') }}">Phòng Khám Nha Khoa</a></h1>
         </div>
 
-        <!-- Menu ở giữa -->
-        {% if session.get('user') %}
-        <nav class="d-flex align-items-center flex-grow-1 justify-content-center">
-            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('dashboard') }}">Trang chủ</a>
-            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('patients') }}">Bệnh nhân</a>
-            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('doctors') }}">Bác sĩ</a>
-            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn</a>
-        </nav>
-        {% endif %}
+      <!-- Menu ở giữa -->
+{% if session.get('user') %}
+<nav class="d-flex align-items-center flex-grow-1 justify-content-center">
+    <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('dashboard') }}">Trang chủ</a>
+
+    {% if session['role'] == 'admin' %}
+        <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('patients') }}">Bệnh nhân</a>
+        <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('doctors') }}">Bác sĩ</a>
+        <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn</a>
+        <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('services') }}">Dịch vụ</a>
+        <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('medicine_types') }}">Loại thuốc</a>
+        <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('medicines') }}">Thuốc</a>
+        <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>
+
+
+    {% elif session['role'] == 'doctor' %}
+        <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn</a>
+        <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('patients') }}">Bệnh nhân</a>
+        <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>
+    {% elif session['role'] == 'patient' %}
+        <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn của tôi</a>
+        <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('doctors') }}">Bác sĩ</a>
+        <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn của tôi</a>
+
+    {% endif %}
+</nav>
+{% endif %}
+
 
         <!-- Đăng nhập / Đăng xuất bên phải -->
         <div class="d-flex align-items-center">
