@@ -1,0 +1,36 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Danh sách người dùng{% endblock %}
+
+{% block content %}
+<h2>Danh sách người dùng</h2>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Hành động</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.id }}</td>
+            <td>{{ user.username }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.role }}</td>
+            <td>
+                <!-- Ví dụ: nút sửa/xóa -->
+                <a class="btn btn-primary btn-sm" href="{{ url_for('edit_user', user_id=user.id) }}">Sửa</a>
+                <a class="btn btn-danger btn-sm" href="{{ url_for('delete_user', user_id=user.id) }}" onclick="return confirm('Xóa người dùng này?')">Xóa</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a class="btn btn-success" href="{{ url_for('add_user') }}">+ Thêm người dùng</a>
+{% endblock %}

@@ -6,10 +6,9 @@ class DoctorDAO:
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM doctors")
-        data = cursor.fetchall()
+        rows = cursor.fetchall()
         conn.close()
-        # Chuyển dict thành Doctor object
-        return [Doctor(**row) for row in data]
+        return [Doctor(**row) for row in rows]
 
     def get_by_id(self, id):
         conn = get_connection()
@@ -23,7 +22,7 @@ class DoctorDAO:
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO doctors(name, specialty, phone) VALUES (%s,%s,%s)",
+            "INSERT INTO doctors(name, specialty, phone) VALUES (%s, %s, %s)",
             (doctor.name, doctor.specialty, doctor.phone)
         )
         conn.commit()

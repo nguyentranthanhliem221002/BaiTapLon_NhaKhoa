@@ -22,7 +22,7 @@ class PatientDAO:
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO patients(name, age, phone, address) VALUES (%s,%s,%s,%s)",
+            "INSERT INTO patients(name, age, phone, address) VALUES (%s, %s, %s, %s)",
             (patient.name, patient.age, patient.phone, patient.address)
         )
         conn.commit()
@@ -37,6 +37,20 @@ class PatientDAO:
         )
         conn.commit()
         conn.close()
+
+    def get_by_email(self, email):
+        # Nếu bạn muốn tìm patient theo email, phải join với bảng users
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT p.*
+            FROM patients p
+            JOIN users u ON u.username = %s OR u.email = %s
+            WHERE u.email = %s
+        """, (email, email, email))
+        row = cursor.fetchone()
+        conn.close()
+        return Patient(**row) if row else None
 
     def delete(self, id):
         conn = get_connection()

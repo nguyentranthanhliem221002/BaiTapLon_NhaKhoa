@@ -7,6 +7,7 @@ from daos.bill_dao import BillDAO
 from daos.appointment_dao import AppointmentDAO
 from daos.service_dao import get_all_services, add_service, get_all_service_types, add_service_type
 from daos.medicine_dao import get_all_medicines, add_medicine, get_all_medicine_types, add_medicine_type
+from models.user import User
 from flask_mail import Mail, Message
 from functools import wraps
 import bcrypt
@@ -15,19 +16,26 @@ from oauthlib.oauth2 import WebApplicationClient
 import json
 import secrets
 from datetime import datetime, timedelta
-
-# Imports model thực tế
-from models.user import User
-from models.patient import Patient
-from models.doctor import Doctor
-from models.appointment import Appointment
-from models.bill import Bill
+import os
+from werkzeug.utils import secure_filename
 
 # ==========================
 # INIT APP
 # ==========================
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
+
+# ==========================
+# UPLOAD CONFIG
+# ==========================
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static/uploads')
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # ==========================
 # INIT DATABASE
@@ -92,8 +100,15 @@ bill_dao = BillDAO()
 def dashboard():
     return render_template("index.html", user=session["user"], role=session["role"])
 
+@app.route("/users")
+@login_required(role="admin")
+def users():
+    users_list = user_dao.get_all_users()
+    return render_template("user/users.html", users=users_list, user_dao=user_dao)
+
+
 # ==========================
-# REGISTER / LOGIN / LOGOUT
+# ACCOUNT MANAGEMENT
 # ==========================
 @app.route("/account/register", methods=["GET", "POST"])
 def register():
@@ -111,12 +126,12 @@ def register():
             return render_template("account/register.html", error="Tên tài khoản hoặc email đã tồn tại!")
 
         new_user = User(username=username, password=password, role=role, email=email)
-        user_dao.register(new_user)
+        user_dao.register(new_user)  # DAO sẽ hash password
+
         flash("Đăng ký thành công! Vui lòng đăng nhập.")
         return redirect(url_for("login"))
 
     return render_template("account/register.html")
-
 @app.route("/account/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -136,10 +151,7 @@ def logout():
     return redirect(url_for("login"))
 
 # ==========================
-# QUÊN MẬT KHẨU / ĐỔI MẬT KHẨU
-# ==========================
-# ==========================
-# QUÊN MẬT KHẨU
+# PASSWORD RESET / CHANGE
 # ==========================
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
@@ -147,14 +159,12 @@ def forgot_password():
         email = request.form["email"].strip()
         user = user_dao.get_by_username(email)
         if user:
-            # Tạo token
             token = secrets.token_urlsafe(32)
             expiry = datetime.now() + timedelta(hours=1)
             user_dao.set_reset_token(user, token, expiry)
 
             reset_link = url_for("reset_password", token=token, _external=True)
 
-            # Gửi email
             msg = Message(
                 subject="Reset mật khẩu",
                 sender=app.config["MAIL_USERNAME"],
@@ -169,7 +179,6 @@ def forgot_password():
             flash("Email không tồn tại!")
     return render_template("account/forgot_password.html")
 
-
 @app.route("/reset-password/<token>", methods=["GET", "POST"])
 def reset_password(token):
     user = user_dao.get_by_token(token)
@@ -183,7 +192,6 @@ def reset_password(token):
         if new_password != confirm_password:
             flash("Mật khẩu mới không khớp!")
             return render_template("account/reset_password.html")
-
         user_dao.update_password(user, new_password)
         user_dao.clear_reset_token(user)
         flash("Đổi mật khẩu thành công! Hãy đăng nhập lại.")
@@ -211,7 +219,7 @@ def change_password():
     return render_template("account/change_password.html")
 
 # ==========================
-# GOOGLE OAUTH LOGIN
+# GOOGLE OAUTH
 # ==========================
 @app.route("/login/google")
 def google_login():
@@ -256,6 +264,98 @@ def google_callback():
         session["user"] = email
         session["role"] = "patient"
     return redirect(url_for("dashboard"))
+# ==========================
+# CRUD USER
+# ==========================
+@app.route("/user/add", methods=["GET", "POST"])
+@login_required(role="admin")
+def add_user():
+    if request.method == "POST":
+        username = request.form["username"].strip()
+        email = request.form["email"].strip()
+        password = request.form["password"]
+        confirm_password = request.form["confirm_password"]
+        role = request.form.get("role", "patient")
+
+        if password != confirm_password:
+            flash("Mật khẩu không khớp!")
+            return render_template("user/user_add.html")
+
+        # Không cho phép thêm admin nếu đã có admin
+        if role == "admin" and user_dao.count_admins() >= 1:
+            flash("Đã tồn tại Admin, không thể thêm admin mới!")
+            return render_template("user/user_add.html")
+
+        if user_dao.get_by_username(username) or user_dao.get_by_username(email):
+            flash("Tên tài khoản hoặc email đã tồn tại!")
+            return render_template("user/user_add.html")
+
+        new_user = User(username=username, password=password, role=role, email=email)
+        user_dao.register(new_user)
+        flash("Thêm người dùng thành công!")
+        return redirect(url_for("users"))
+
+    return render_template("user/user_add.html")
+
+@app.route("/user/edit/<int:id>", methods=["GET", "POST"])
+@login_required(role="admin")
+def edit_user(id):
+    users = user_dao.get_all_users()
+    user = next((u for u in users if u.id == id), None)
+    if not user:
+        flash("Người dùng không tồn tại!")
+        return redirect(url_for("users"))
+
+    if request.method == "POST":
+        username = request.form["username"].strip()
+        email = request.form["email"].strip()
+        role = request.form.get("role", "patient")
+
+        # Không cho đổi thành admin nếu đã có admin khác
+        if role == "admin" and user.role != "admin" and user_dao.count_admins() >= 1:
+            flash("Đã tồn tại Admin khác, không thể đổi role thành Admin!")
+            return render_template("user/user_edit.html", user=user, users=users)
+
+        user.username = username
+        user.email = email
+        user.role = role
+
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE users SET username=%s, email=%s, role=%s WHERE id=%s",
+            (user.username, user.email, user.role, user.id)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        flash("Cập nhật người dùng thành công!")
+        return redirect(url_for("users"))
+
+    return render_template("user/user_edit.html", user=user, users=users)
+
+@app.route("/user/delete/<int:id>")
+@login_required(role="admin")
+def delete_user(id):
+    user = next((u for u in user_dao.get_all_users() if u.id == id), None)
+    if not user:
+        flash("Người dùng không tồn tại!")
+        return redirect(url_for("users"))
+
+    if not user_dao.can_delete_user(user):
+        flash("Không thể xóa admin cuối cùng!")
+        return redirect(url_for("users"))
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE id=%s", (id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    flash("Xóa người dùng thành công!")
+    return redirect(url_for("users"))
+
 
 # ==========================
 # CRUD PATIENT
@@ -311,6 +411,15 @@ def edit_patient(id):
 def delete_patient(id):
     patient_dao.delete(id)
     return redirect(url_for("patients"))
+
+@app.route('/patient/profile')
+def patient_profile():
+    if 'user' not in session or session['role'] != 'patient':
+        return redirect(url_for('login'))
+
+    patient = patient_dao.get_by_email(session['user'])
+
+    return render_template('patient/profile.html', patient=patient)
 
 # ====================
 # CRUD Bác sĩ
@@ -582,51 +691,55 @@ def delete_medicine_type_route(id):
     db.close()
     flash("Xóa loại thuốc thành công!")
     return redirect(url_for("medicine_types"))
-
-
-# -----------------------
-# Medicines
-# -----------------------
+# ==========================
+# MEDICINE CRUD + UPLOAD ẢNH + TÌM KIẾM
+# ==========================
 @app.route("/medicines")
 @login_required()
 def medicines():
-    keyword = request.args.get("keyword", "").strip().lower()
-    type_id = request.args.get("type_id", "")
-
     meds = get_all_medicines()
-    types = get_all_medicine_types()  # để truyền ra dropdown
+    types = get_all_medicine_types()
 
-    # Lọc theo tên
+    # Lấy keyword và type_id từ query string
+    keyword = request.args.get("keyword", "").strip().lower()
+    type_id = request.args.get("type_id", "").strip()
+
+    # Lọc theo keyword
     if keyword:
-        meds = [m for m in meds if keyword in m['name'].lower()]
+        meds = [m for m in meds if m.get('name') and keyword in m['name'].lower()]
 
-    # Lọc theo loại
+    # Lọc theo loại thuốc
     if type_id:
         try:
             type_id_int = int(type_id)
-            meds = [m for m in meds if m['medicine_type_id'] == type_id_int]
+            meds = [
+                m for m in meds
+                if m.get('medicine_type_id') is not None and int(m['medicine_type_id']) == type_id_int
+            ]
         except ValueError:
             meds = []
 
     return render_template("medicine/medicines.html", medicines=meds, types=types)
 
 
-@app.route("/medicine/add", methods=["GET","POST"])
+@app.route("/medicine/add", methods=["GET", "POST"])
 @login_required(role="admin")
 def add_medicine_route():
     types = get_all_medicine_types()
     if request.method == "POST":
         data = request.form
-        add_medicine(
-            data["name"],
-            int(data["medicine_type_id"]),
-            float(data["price"])
-        )
+        image_file = request.files.get("image")
+        filename = None
+        if image_file and allowed_file(image_file.filename):
+            filename = secure_filename(image_file.filename)
+            image_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        add_medicine(data["name"], int(data["medicine_type_id"]), float(data["price"]), filename)
         flash("Thêm thuốc thành công!")
         return redirect(url_for("medicines"))
     return render_template("medicine/medicine_add.html", types=types)
 
-@app.route("/medicine/edit/<int:id>", methods=["GET","POST"])
+
+@app.route("/medicine/edit/<int:id>", methods=["GET", "POST"])
 @login_required(role="admin")
 def edit_medicine(id):
     meds = get_all_medicines()
@@ -638,19 +751,25 @@ def edit_medicine(id):
     types = get_all_medicine_types()
     if request.method == "POST":
         data = request.form
+        image_file = request.files.get("image")
+        filename = medicine['image']  # giữ ảnh cũ nếu không upload mới
+        if image_file and allowed_file(image_file.filename):
+            filename = secure_filename(image_file.filename)
+            image_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
         db = get_connection()
         cursor = db.cursor()
         cursor.execute(
-            "UPDATE medicines SET name=%s, medicine_type_id=%s, price=%s WHERE id=%s",
-            (data["name"], int(data["medicine_type_id"]), float(data["price"]), id)
+            "UPDATE medicines SET name=%s, medicine_type_id=%s, price=%s, image=%s WHERE id=%s",
+            (data["name"], int(data["medicine_type_id"]), float(data["price"]), filename, id)
         )
         db.commit()
         cursor.close()
         db.close()
         flash("Cập nhật thuốc thành công!")
         return redirect(url_for("medicines"))
-
     return render_template("medicine/medicine_edit.html", medicine=medicine, types=types)
+
 
 @app.route("/medicine/delete/<int:id>")
 @login_required(role="admin")

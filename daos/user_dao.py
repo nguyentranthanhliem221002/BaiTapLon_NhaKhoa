@@ -33,8 +33,10 @@ class UserDAO:
             (user.username, user.email, hashed, user.role)
         )
         conn.commit()
+        user.id = cursor.lastrowid
         cursor.close()
         conn.close()
+        return user.id
 
     def login(self, username_or_email: str, password: str):
         user = self.get_by_username(username_or_email)
@@ -88,6 +90,54 @@ class UserDAO:
             )
         return None
 
+    def get_all_users(self):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users")
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        users = []
+        for row in rows:
+            users.append(User(
+                id=row["id"],
+                username=row["username"],
+                password=row["password"],
+                role=row["role"],
+                email=row.get("email", "")
+            ))
+        return users
+    def count_admins(self):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) as cnt FROM users WHERE role='admin'")
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return row["cnt"] if row else 0
+
+    def can_delete_user(self, user: User):
+        # Không xóa admin cuối cùng
+        if user.role == "admin" and self.count_admins() <= 1:
+            return False
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # Kiểm tra bảng patients
+        cursor.execute("SELECT COUNT(*) AS cnt FROM patients WHERE user_id=%s", (user.id,))
+        row = cursor.fetchone()
+        patient_count = row["cnt"] if row else 0
+
+        cursor.close()
+        conn.close()
+
+        if patient_count > 0:
+            return False
+
+        return True
+
     def clear_reset_token(self, user: User):
         conn = get_connection()
         cursor = conn.cursor()
@@ -95,6 +145,8 @@ class UserDAO:
             "UPDATE users SET reset_token=NULL, reset_token_expiry=NULL WHERE id=%s",
             (user.id,)
         )
+
         conn.commit()
         cursor.close()
         conn.close()
+

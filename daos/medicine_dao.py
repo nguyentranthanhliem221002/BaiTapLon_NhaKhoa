@@ -28,7 +28,7 @@ def get_all_medicines():
     db = get_connection()
     cursor = db.cursor(pymysql.cursors.DictCursor)
     cursor.execute("""
-        SELECT m.id, m.name, m.price, t.id AS medicine_type_id, t.name AS type_name
+        SELECT m.id, m.name, m.price, m.image, t.id AS medicine_type_id, t.name AS type_name
         FROM medicines m
         JOIN medicine_types t ON m.medicine_type_id = t.id
     """)
@@ -37,12 +37,22 @@ def get_all_medicines():
     db.close()
     return meds
 
-def add_medicine(name, type_id, price):
+def add_medicine(name, type_id, price, image=None):
     db = get_connection()
     cursor = db.cursor()
     cursor.execute(
-        "INSERT INTO medicines(name, medicine_type_id, price) VALUES (%s,%s,%s)",
-        (name, type_id, price)
+        "INSERT INTO medicines(name, medicine_type_id, price, image) VALUES (%s,%s,%s,%s)",
+        (name, type_id, price, image)
+    )
+    db.commit()
+    cursor.close()
+    db.close()
+def update_medicine(id, name, type_id, price, image=None):
+    db = get_connection()
+    cursor = db.cursor()
+    cursor.execute(
+        "UPDATE medicines SET name=%s, medicine_type_id=%s, price=%s, image=%s WHERE id=%s",
+        (name, type_id, price, image, id)
     )
     db.commit()
     cursor.close()

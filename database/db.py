@@ -23,13 +23,13 @@ def init_database():
     cursor.execute(f"USE {DB_NAME}")
 
     # ----------------------------
-    # Bảng users (đầy đủ các cột)
+    # Bảng users
     # ----------------------------
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
             username VARCHAR(100) UNIQUE,
-            password VARCHAR (255),
+            password VARCHAR(255),
             role VARCHAR(20),
             email VARCHAR(255) UNIQUE,
             reset_token VARCHAR(255),
@@ -43,10 +43,12 @@ def init_database():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS patients (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT UNIQUE,
             name VARCHAR(255),
             age INT,
             phone VARCHAR(20),
-            address VARCHAR(255)
+            address VARCHAR(255),
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     """)
 
@@ -56,9 +58,11 @@ def init_database():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS doctors (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT UNIQUE,
             name VARCHAR(255),
             specialty VARCHAR(255),
-            phone VARCHAR(20)
+            phone VARCHAR(20),
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     """)
 
@@ -114,65 +118,111 @@ def init_database():
     # Bảng medicines
     # ----------------------------
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS medicines (
+                   CREATE TABLE IF NOT EXISTS medicines
+                   (
+                       id
+                       INT
+                       AUTO_INCREMENT
+                       PRIMARY
+                       KEY,
+                       name
+                       VARCHAR
+                   (
+                       255
+                   ) NOT NULL,
+                       medicine_type_id INT NOT NULL,
+                       price DECIMAL
+                   (
+                       10,
+                       2
+                   ) NOT NULL,
+                       image VARCHAR
+                   (
+                       255
+                   ),
+                       FOREIGN KEY
+                   (
+                       medicine_type_id
+                   ) REFERENCES medicine_types
+                   (
+                       id
+                   )
+                       )
+                   """)
+
+    # ----------------------------
+    # Bảng bills
+    # ----------------------------
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bills (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            medicine_type_id INT NOT NULL,
-            price DECIMAL(10,2) NOT NULL,
-            FOREIGN KEY (medicine_type_id) REFERENCES medicine_types(id)
+            appointment_id INT NOT NULL,
+            amount DECIMAL(10,2) NOT NULL,
+            status VARCHAR(50) DEFAULT 'Chưa thanh toán',
+            payment_method VARCHAR(50),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (appointment_id) REFERENCES appointments(id)
         )
     """)
-
     db.commit()
 
     # ----------------------------
-    # Seed dữ liệu
+    # Seed users
     # ----------------------------
-    # Users
     cursor.execute("SELECT COUNT(*) AS total FROM users")
     if cursor.fetchone()["total"] == 0:
         users = [
             ("admin", "admin@example.com", "admin123", "admin"),
-            ("doctor", "doctor@example.com", "123456", "doctor"),
-            ("patient", "patient@example.com", "123456", "patient")
+            ("doctor1", "doctor@example.com", "123456", "doctor"),
+            ("patient1", "nva@example.com", "123456", "patient"),
+            ("patient2", "ttb@example.com", "123456", "patient")
         ]
+        user_ids = {}
         for username, email, pwd, role in users:
             hashed = bcrypt.hashpw(pwd.encode(), bcrypt.gensalt()).decode()
             cursor.execute(
                 "INSERT INTO users (username, email, password, role) VALUES (%s, %s, %s, %s)",
                 (username, email, hashed, role)
             )
+            user_ids[username] = cursor.lastrowid
         db.commit()
 
-    # Doctors
+    # ----------------------------
+    # Seed doctors
+    # ----------------------------
     cursor.execute("SELECT COUNT(*) AS total FROM doctors")
     if cursor.fetchone()["total"] == 0:
         cursor.execute("""
-            INSERT INTO doctors (name, specialty, phone)
+            INSERT INTO doctors (user_id, name, specialty, phone)
             VALUES
-            ('Dr. Nam', 'Nha chu', '0901123456'),
-            ('Dr. Hoa', 'Chỉnh nha', '0902876543')
-        """)
+            (%s, 'Dr. Nam', 'Nha chu', '0901123456')
+        """, (user_ids["doctor1"],))
         db.commit()
 
-    # Patients
+    # ----------------------------
+    # Seed patients
+    # ----------------------------
     cursor.execute("SELECT COUNT(*) AS total FROM patients")
     if cursor.fetchone()["total"] == 0:
         cursor.execute("""
-            INSERT INTO patients (name, age, phone, address)
+            INSERT INTO patients (user_id, name, age, phone, address)
             VALUES
-            ('Nguyen Van A', 25, '0901123456', 'Ha Noi'),
-            ('Tran Thi B', 30, '0902987654', 'Da Nang')
-        """)
+            (%s, 'Nguyen Van A', 25, '0901123456', 'Ha Noi'),
+            (%s, 'Tran Thi B', 30, '0902987654', 'Da Nang')
+        """, (user_ids["patient1"], user_ids["patient2"]))
         db.commit()
 
-    # Service Types
+    # ----------------------------
+    # Seed service_types
+    # ----------------------------
     cursor.execute("SELECT COUNT(*) AS total FROM service_types")
     if cursor.fetchone()["total"] == 0:
         cursor.execute("INSERT INTO service_types (name) VALUES ('Khám răng'), ('Nha khoa thẩm mỹ')")
         db.commit()
 
-    # Services
+    # ----------------------------
+    # Seed services
+    # ----------------------------
     cursor.execute("SELECT COUNT(*) AS total FROM services")
     if cursor.fetchone()["total"] == 0:
         cursor.execute("""
@@ -182,13 +232,17 @@ def init_database():
         """)
         db.commit()
 
-    # Medicine Types
+    # ----------------------------
+    # Seed medicine_types
+    # ----------------------------
     cursor.execute("SELECT COUNT(*) AS total FROM medicine_types")
     if cursor.fetchone()["total"] == 0:
         cursor.execute("INSERT INTO medicine_types (name) VALUES ('Thuốc giảm đau'), ('Thuốc kháng sinh')")
         db.commit()
 
-    # Medicines
+    # ----------------------------
+    # Seed medicines
+    # ----------------------------
     cursor.execute("SELECT COUNT(*) AS total FROM medicines")
     if cursor.fetchone()["total"] == 0:
         cursor.execute("""
@@ -197,47 +251,10 @@ def init_database():
             ('Amoxicillin', 2, 5000)
         """)
         db.commit()
-    # ----------------------------
-    # Bảng bills
-    # ----------------------------
-    cursor.execute("""
-                   CREATE TABLE IF NOT EXISTS bills
-                   (
-                       id
-                       INT
-                       AUTO_INCREMENT
-                       PRIMARY
-                       KEY,
-                       appointment_id
-                       INT
-                       NOT
-                       NULL,
-                       amount
-                       DECIMAL
-                   (
-                       10,
-                       2
-                   ) NOT NULL,
-                       status VARCHAR
-                   (
-                       50
-                   ) DEFAULT 'Chưa thanh toán',
-                       payment_method VARCHAR
-                   (
-                       50
-                   ),
-                       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                       FOREIGN KEY
-                   (
-                       appointment_id
-                   ) REFERENCES appointments
-                   (
-                       id
-                   )
-                       )
-                   """)
-    db.commit()
 
     cursor.close()
     db.close()
     print(">>> ✓ Database & Tables ready!")
+
+if __name__ == "__main__":
+    init_database()
