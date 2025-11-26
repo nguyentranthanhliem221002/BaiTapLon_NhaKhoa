@@ -1,29 +1,29 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, DECIMAL, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, DECIMAL, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from NhaKhoa import db, app
+from datetime import datetime
 
+
+class Abstract(db.Model):
+    __abstract__ = True
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    active = Column(Boolean, default=True)
+    created_date = Column(DateTime, default=datetime.now)
 
 class User(db.Model):
     __tablename__ = 'users'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+
     username = Column(String(100), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
-    role = Column(String(20), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
-    reset_token = Column(String(255))
-    reset_token_expiry = Column(DateTime)
+    address = Column(String(255), nullable=True)
+    image = Column(String(255), nullable=True)
+    day_of_birth = Column(DateTime, nullable=False)
+    full_name = Column(String(255), nullable=False)
 
-class Patient(db.Model):
-    __tablename__ = 'patients'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), nullable=False)
-    age = Column(Integer)
-    phone = Column(String(20))
-    address = Column(String(255))
-
-class Doctor(db.Model):
+class Doctor(User):
     __tablename__ = 'doctors'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
