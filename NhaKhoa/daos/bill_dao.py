@@ -1,6 +1,6 @@
 import pymysql
-from database.db import get_connection
-from models.bill import Bill
+from NhaKhoa.database.db import get_connection
+from NhaKhoa.models.bill import Bill
 
 class BillDAO:
     def __init__(self):

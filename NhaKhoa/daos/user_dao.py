@@ -1,6 +1,6 @@
 import bcrypt
-from database.db import get_connection
-from models.user import User
+from NhaKhoa.database.db import get_connection
+from NhaKhoa.models.user import User
 from datetime import datetime
 
 class UserDAO:
