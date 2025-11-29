@@ -1,5 +1,5 @@
 import pymysql
-from database.db import get_connection
+from NhaKhoa.database.db import get_connection
 
 # -----------------------
 # Medicine Types

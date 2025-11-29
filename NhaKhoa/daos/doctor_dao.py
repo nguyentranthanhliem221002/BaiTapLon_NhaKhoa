@@ -1,5 +1,5 @@
-from database.db import get_connection
-from models.doctor import Doctor
+from NhaKhoa.database.db import get_connection
+from NhaKhoa.models.doctor import Doctor
 
 class DoctorDAO:
     def get_all(self):

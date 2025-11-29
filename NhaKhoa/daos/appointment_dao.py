@@ -1,5 +1,5 @@
-from database.db import get_connection
-from models.appointment import Appointment
+from NhaKhoa.database.db import get_connection
+from NhaKhoa.models.appointment import Appointment
 
 class AppointmentDAO:
     def get_all(self):

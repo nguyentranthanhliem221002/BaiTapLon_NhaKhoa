@@ -1,6 +1,6 @@
 import pymysql
 
-from database.db import get_connection
+from NhaKhoa.database.db import get_connection
 
 def get_all_service_types():
     db = get_connection()
