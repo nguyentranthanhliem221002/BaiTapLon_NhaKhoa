@@ -1,49 +1,44 @@
-import pymysql
-from NhaKhoa.database.db import get_connection
+from NhaKhoa.models.medicine import Medicine
+from NhaKhoa.models.medicineType import MedicineType
+from NhaKhoa.database.db import get_session
 
-# -----------------------
-# Medicine Types
-# -----------------------
-def get_all_medicine_types():
-    db = get_connection()
-    cursor = db.cursor(pymysql.cursors.DictCursor)
-    cursor.execute("SELECT * FROM medicine_types")
-    types = cursor.fetchall()
-    cursor.close()
-    db.close()
-    return types
+class MedicineDAO:
+    def get_all_medicines(self):
+        with get_session() as session:
+            medicines = session.query(Medicine).all()
+            for m in medicines:
+                m.type_name = m.medicine_type.name if m.medicine_type else "Chưa xác định"
+            return medicines
 
-def add_medicine_type(name):
-    db = get_connection()
-    cursor = db.cursor()
-    cursor.execute("INSERT INTO medicine_types (name) VALUES (%s)", (name,))
-    db.commit()
-    cursor.close()
-    db.close()
+    def get_by_id(self, medicine_id):
+        with get_session() as session:
+            medicine = session.query(Medicine).filter(Medicine.id == medicine_id).first()
+            if medicine:
+                medicine.type_name = medicine.medicine_type.name if medicine.medicine_type else "Chưa xác định"
+            return medicine
 
-# -----------------------
-# Medicines
-# -----------------------
-def get_all_medicines():
-    db = get_connection()
-    cursor = db.cursor(pymysql.cursors.DictCursor)
-    cursor.execute("""
-        SELECT m.id, m.name, m.price, t.id AS medicine_type_id, t.name AS type_name
-        FROM medicines m
-        JOIN medicine_types t ON m.medicine_type_id = t.id
-    """)
-    meds = cursor.fetchall()
-    cursor.close()
-    db.close()
-    return meds
+    def add_medicine(self, name, type_id, price):
+        with get_session() as session:
+            new_medicine = Medicine(name=name, medicine_type_id=type_id, price=price)
+            session.add(new_medicine)
+            session.commit()
+            return new_medicine
 
-def add_medicine(name, type_id, price):
-    db = get_connection()
-    cursor = db.cursor()
-    cursor.execute(
-        "INSERT INTO medicines(name, medicine_type_id, price) VALUES (%s,%s,%s)",
-        (name, type_id, price)
-    )
-    db.commit()
-    cursor.close()
-    db.close()
+    def update_medicine(self, medicine: Medicine):
+        with get_session() as session:
+            session.merge(medicine)
+            session.commit()
+
+    def search_medicines(self, keyword: str = "", type_id: int = None):
+        with get_session() as session:
+            query = session.query(Medicine).join(MedicineType, isouter=True)
+            if keyword:
+                keyword = f"%{keyword}%"
+                query = query.filter(Medicine.name.ilike(keyword))
+            if type_id:
+                query = query.filter(Medicine.medicine_type_id == type_id)
+            medicines = query.all()
+            for m in medicines:
+                m.type_name = m.medicine_type.name if m.medicine_type else "Chưa xác định"
+            return medicines
+

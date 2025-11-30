@@ -1,8 +1,16 @@
-class Bill:
-    def __init__(self, id=None, appointment_id=None, amount=0, status="Chưa thanh toán", payment_method=None, created_at=None):
-        self.id = id
-        self.appointment_id = appointment_id
-        self.amount = amount
-        self.status = status
-        self.payment_method = payment_method
-        self.created_at = created_at
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+from NhaKhoa.database.db import Base
+
+class Bill(Base):
+    __tablename__ = "bills"
+    __table_args__ = {"extend_existing": True}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    appointment_id = Column(Integer, ForeignKey("appointments.id"), nullable=False)
+    amount = Column(Integer, default=0)
+    status = Column(String(50), default="Chưa thanh toán")
+    payment_method = Column(String(50), nullable=True)
+    created_at = Column(DateTime, nullable=True)
+
+    appointment = relationship("NhaKhoa.models.appointment.Appointment", back_populates="bills")

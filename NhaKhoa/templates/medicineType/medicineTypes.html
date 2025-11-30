@@ -2,7 +2,7 @@
 
 {% block content %}
 <h2>Danh sách loại thuốc</h2>
-<a class="btn btn-success mb-3" href="{{ url_for('add_medicine_type_route') }}">+ Thêm loại thuốc</a>
+<a class="btn btn-success mb-3" href="{{ url_for('add_medicine_type') }}">+ Thêm loại thuốc</a>
 
 <!-- Form tìm kiếm -->
 <form method="GET" action="{{ url_for('medicine_types') }}" class="mb-3 row g-2">
@@ -32,8 +32,8 @@
             <td>{{ t.name }}</td>
             <td>
                 <!-- Nếu muốn edit sau này -->
-                 <a class="btn btn-primary btn-sm" href="{{ url_for('edit_medicine_type_route', id=t.id) }}">Sửa</a>
-                <a class="btn btn-danger btn-sm" href="{{ url_for('delete_medicine_type_route', id=t.id) }}" onclick="return confirm('Xóa loại thuốc?')">Xóa</a>
+                 <a class="btn btn-primary btn-sm" href="{{ url_for('edit_medicine_type', id=t.id) }}">Sửa</a>
+                <a class="btn btn-danger btn-sm" href="{{ url_for('delete_medicine_type', id=t.id) }}" onclick="return confirm('Xóa loại thuốc?')">Xóa</a>
             </td>
         </tr>
         {% endfor %}

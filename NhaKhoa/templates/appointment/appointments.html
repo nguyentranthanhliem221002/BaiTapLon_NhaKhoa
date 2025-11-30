@@ -38,8 +38,10 @@
         {% for a in appointments %}
         <tr>
             <td>{{ a.id }}</td>
-            <td>{{ a.patient_name }}</td>
-            <td>{{ a.doctor_name }}</td>
+<td>{{ a.patient.name if a.patient else '' }}</td>
+<td>{{ a.doctor.name if a.doctor else '' }}</td>
+
+
             <td>{{ a.appointment_date.strftime('%Y-%m-%d %H:%M') if a.appointment_date else '' }}</td>
             <td>{{ a.description }}</td>
             <td>

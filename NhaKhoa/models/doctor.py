@@ -1,6 +1,30 @@
-class Doctor:
-    def __init__(self, id=None, name="", specialty="", phone=""):
-        self.id = id
-        self.name = name
-        self.specialty = specialty
-        self.phone = phone
+#
+# from sqlalchemy import Column, Integer, String, ForeignKey
+# from NhaKhoa.database.db import Base
+#
+# class Doctor(Base):
+#     __tablename__ = "doctors"
+#     __table_args__ = {"extend_existing": True}
+#
+#     id = Column(Integer, primary_key=True, autoincrement=True)
+#     name = Column(String(100), nullable=False)
+#     specialty = Column(String(100), nullable=False)
+#     phone = Column(String(20), nullable=False)
+#     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # liên kết User nếu cần
+#
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
+from NhaKhoa.database.db import Base
+
+class Doctor(Base):
+    __tablename__ = "doctors"
+    __table_args__ = {"extend_existing": True}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
+    specialty = Column(String(100))
+    phone = Column(String(20), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"))
+
+    user = relationship("User", back_populates="doctors")
+    appointments = relationship("Appointment", back_populates="doctor")

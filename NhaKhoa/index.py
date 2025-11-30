@@ -1,54 +1,51 @@
+# index.py
 from flask import Flask, render_template, redirect, request, session, url_for, flash
-from database.db import init_database, get_connection
+from functools import wraps
+import bcrypt
+import secrets
+from datetime import datetime, timedelta
+import requests
+import json
+
+from flask_mail import Mail, Message
+from oauthlib.oauth2 import WebApplicationClient
+
+# Import DAO và Models
+from NhaKhoa.database.db import init_database, get_connection
 from daos.user_dao import UserDAO
 from daos.patient_dao import PatientDAO
 from daos.doctor_dao import DoctorDAO
 from daos.bill_dao import BillDAO
 from daos.appointment_dao import AppointmentDAO
-from daos.service_dao import get_all_services, add_service, get_all_service_types, add_service_type
-from daos.medicine_dao import get_all_medicines, add_medicine, get_all_medicine_types, add_medicine_type
-from flask_mail import Mail, Message
-from functools import wraps
-import bcrypt
-import requests
-from oauthlib.oauth2 import WebApplicationClient
-import json
-import secrets
-from datetime import datetime, timedelta
+from daos.service_dao import ServiceDAO
+from daos.serviceType_dao import ServiceTypeDAO
+from daos.medicine_dao import MedicineDAO
+from daos.medicineType_dao import MedicineTypeDAO
 
-# Imports model thực tế
-from models.user import User
-from models.patient import Patient
-from models.doctor import Doctor
-from models.appointment import Appointment
-from models.bill import Bill
+from NhaKhoa.models.user import User
+from NhaKhoa.models.patient import Patient
+from NhaKhoa.models.doctor import Doctor
+from NhaKhoa.models.appointment import Appointment
 
-# ==========================
 # INIT APP
-# ==========================
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# ==========================
+
 # INIT DATABASE
-# ==========================
 init_database()
 
-# ==========================
 # CONFIG FLASK-MAIL
-# ==========================
 app.config.update(
     MAIL_SERVER='smtp.gmail.com',
     MAIL_PORT=587,
     MAIL_USE_TLS=True,
-    MAIL_USERNAME='youremail@gmail.com',       # Thay bằng Gmail của bạn
-    MAIL_PASSWORD='yourapppassword'           # Thay bằng App Password
+    MAIL_USERNAME='youremail@gmail.com',  # Thay bằng Gmail của bạn
+    MAIL_PASSWORD='yourapppassword'       # Thay bằng App Password
 )
 mail = Mail(app)
 
-# ==========================
 # GOOGLE OAUTH CONFIG
-# ==========================
 GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"
 GOOGLE_CLIENT_SECRET = "YOUR_GOOGLE_CLIENT_SECRET"
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
@@ -57,9 +54,7 @@ client = WebApplicationClient(GOOGLE_CLIENT_ID)
 def get_google_provider_cfg():
     return requests.get(GOOGLE_DISCOVERY_URL).json()
 
-# ==========================
 # DECORATOR PHÂN QUYỀN
-# ==========================
 def login_required(role=None):
     def decorator(f):
         @wraps(f)
@@ -74,28 +69,26 @@ def login_required(role=None):
         return decorated_function
     return decorator
 
-# ==========================
-# DAO INIT
-# ==========================
+# INIT DAO
 user_dao = UserDAO()
 patient_dao = PatientDAO()
 doctor_dao = DoctorDAO()
 appointment_dao = AppointmentDAO()
 bill_dao = BillDAO()
+service_dao = ServiceDAO()
+serviceType_dao = ServiceTypeDAO()
+medicine_dao = MedicineDAO()
+medicineType_dao = MedicineTypeDAO()
 
-# ==========================
-# HOME / DASHBOARD
-# ==========================
+# DASHBOARD
 @app.route("/")
 @app.route("/dashboard")
 @login_required()
 def dashboard():
     return render_template("index.html", user=session["user"], role=session["role"])
 
-# ==========================
-# REGISTER / LOGIN / LOGOUT
-# ==========================
-@app.route("/account/register", methods=["GET", "POST"])
+# ACCOUNT: REGISTER / LOGIN / LOGOUT
+@app.route("/account/register", methods=["GET","POST"])
 def register():
     if request.method == "POST":
         username = request.form["username"].strip()
@@ -117,7 +110,7 @@ def register():
 
     return render_template("account/register.html")
 
-@app.route("/account/login", methods=["GET", "POST"])
+@app.route("/account/login", methods=["GET","POST"])
 def login():
     if request.method == "POST":
         username_or_email = request.form["username"].strip()
@@ -135,42 +128,31 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# ==========================
-# QUÊN MẬT KHẨU / ĐỔI MẬT KHẨU
-# ==========================
-# ==========================
-# QUÊN MẬT KHẨU
-# ==========================
-@app.route("/forgot-password", methods=["GET", "POST"])
+# PASSWORD RESET / CHANGE
+@app.route("/forgot-password", methods=["GET","POST"])
 def forgot_password():
     if request.method == "POST":
         email = request.form["email"].strip()
         user = user_dao.get_by_username(email)
         if user:
-            # Tạo token
             token = secrets.token_urlsafe(32)
             expiry = datetime.now() + timedelta(hours=1)
             user_dao.set_reset_token(user, token, expiry)
-
             reset_link = url_for("reset_password", token=token, _external=True)
-
-            # Gửi email
             msg = Message(
                 subject="Reset mật khẩu",
                 sender=app.config["MAIL_USERNAME"],
                 recipients=[user.email],
-                body=f"Để đổi mật khẩu, vui lòng nhấn vào link: {reset_link}\nLink có hiệu lực 1 giờ."
+                body=f"Nhấn vào link để đổi mật khẩu: {reset_link}\nLink có hiệu lực 1 giờ."
             )
             mail.send(msg)
-
             flash("Chúng tôi đã gửi hướng dẫn reset mật khẩu đến email của bạn.")
             return redirect(url_for("login"))
         else:
             flash("Email không tồn tại!")
     return render_template("account/forgot_password.html")
 
-
-@app.route("/reset-password/<token>", methods=["GET", "POST"])
+@app.route("/reset-password/<token>", methods=["GET","POST"])
 def reset_password(token):
     user = user_dao.get_by_token(token)
     if not user:
@@ -191,14 +173,13 @@ def reset_password(token):
 
     return render_template("account/reset_password.html")
 
-@app.route("/change-password", methods=["GET", "POST"])
+@app.route("/change-password", methods=["GET","POST"])
 @login_required()
 def change_password():
     if request.method == "POST":
         current = request.form["current_password"]
         new = request.form["new_password"]
         confirm = request.form["confirm_password"]
-
         user = user_dao.get_by_username(session["user"])
         if not user_dao.check_password(user, current):
             flash("Mật khẩu hiện tại không đúng!")
@@ -210,9 +191,7 @@ def change_password():
             return redirect(url_for("dashboard"))
     return render_template("account/change_password.html")
 
-# ==========================
 # GOOGLE OAUTH LOGIN
-# ==========================
 @app.route("/login/google")
 def google_login():
     google_provider_cfg = get_google_provider_cfg()
@@ -257,28 +236,17 @@ def google_callback():
         session["role"] = "patient"
     return redirect(url_for("dashboard"))
 
-# ==========================
 # CRUD PATIENT
-# ==========================
 @app.route("/patients")
 @login_required()
 def patients():
     filter_by = request.args.get("filter_by")
     keyword = request.args.get("keyword", "").strip()
-    all_patients = patient_dao.get_all()
 
     if filter_by and keyword:
-        keyword_lower = keyword.lower()
-        if filter_by == "name":
-            all_patients = [p for p in all_patients if keyword_lower in p.name.lower()]
-        elif filter_by == "age":
-            try:
-                age_int = int(keyword)
-                all_patients = [p for p in all_patients if p.age == age_int]
-            except ValueError:
-                all_patients = []
-        elif filter_by == "phone":
-            all_patients = [p for p in all_patients if keyword_lower in p.phone.lower()]
+        all_patients = patient_dao.search(filter_by, keyword)
+    else:
+        all_patients = patient_dao.get_all()
 
     return render_template("patient/patients.html", patients=all_patients)
 
@@ -302,7 +270,7 @@ def edit_patient(id):
         patient.age = int(data["age"])
         patient.phone = data["phone"]
         patient.address = data["address"]
-        patient_dao.update(patient)
+        patient_dao.update(patient)  # ✅ dùng DAO update
         return redirect(url_for("patients"))
     return render_template("patient/patient_edit.html", patient=patient)
 
@@ -312,26 +280,16 @@ def delete_patient(id):
     patient_dao.delete(id)
     return redirect(url_for("patients"))
 
-# ====================
-# CRUD Bác sĩ
-# ====================
+# CRUD DOCTOR
 @app.route("/doctors")
 @login_required()
 def doctors():
     filter_by = request.args.get("filter_by")
     keyword = request.args.get("keyword", "").strip()
-
-    all_doctors = doctor_dao.get_all()
-
     if filter_by and keyword:
-        keyword_lower = keyword.lower()
-        if filter_by == "name":
-            all_doctors = [d for d in all_doctors if keyword_lower in d.name.lower()]
-        elif filter_by == "specialty":
-            all_doctors = [d for d in all_doctors if keyword_lower in d.specialty.lower()]
-        elif filter_by == "phone":
-            all_doctors = [d for d in all_doctors if keyword_lower in d.phone.lower()]
-
+        all_doctors = doctor_dao.search(filter_by, keyword)
+    else:
+        all_doctors = doctor_dao.get_all()
     return render_template("doctor/doctors.html", doctors=all_doctors)
 
 @app.route("/doctor/add", methods=["GET","POST"])
@@ -339,11 +297,7 @@ def doctors():
 def add_doctor():
     if request.method == "POST":
         data = request.form
-        new_doctor = Doctor(
-            name=data["name"],
-            specialty=data["specialty"],
-            phone=data["phone"]
-        )
+        new_doctor = Doctor(name=data["name"], specialty=data["specialty"], phone=data["phone"])
         doctor_dao.add(new_doctor)
         return redirect(url_for("doctors"))
     return render_template("doctor/doctor_add.html")
@@ -357,7 +311,7 @@ def edit_doctor(id):
         doctor.name = data["name"]
         doctor.specialty = data["specialty"]
         doctor.phone = data["phone"]
-        doctor_dao.update(doctor)
+        doctor_dao.update(doctor)  # ✅ dùng DAO update
         return redirect(url_for("doctors"))
     return render_template("doctor/doctor_edit.html", doctor=doctor)
 
@@ -367,30 +321,16 @@ def delete_doctor(id):
     doctor_dao.delete(id)
     return redirect(url_for("doctors"))
 
-# ====================
-# CRUD Lịch hẹn
-# ====================
+# CRUD LỊCH HẸN (APPOINTMENT)
 @app.route("/appointments")
 @login_required()
 def appointments():
     filter_by = request.args.get("filter_by")
     keyword = request.args.get("keyword", "").strip()
-
-    all_appointments = appointment_dao.get_all()
-
     if filter_by and keyword:
-        if filter_by == "patient":
-            all_appointments = [a for a in all_appointments if keyword.lower() in a.patient_name.lower()]
-        elif filter_by == "doctor":
-            all_appointments = [a for a in all_appointments if keyword.lower() in a.doctor_name.lower()]
-        elif filter_by == "date":
-            from datetime import datetime
-            try:
-                keyword_date = datetime.strptime(keyword, "%Y-%m-%d").date()
-                all_appointments = [a for a in all_appointments if a.appointment_date.date() == keyword_date]
-            except ValueError:
-                all_appointments = []
-
+        all_appointments = appointment_dao.search(filter_by, keyword)
+    else:
+        all_appointments = appointment_dao.get_all()
     return render_template("appointment/appointments.html", appointments=all_appointments)
 
 @app.route("/appointment/add", methods=["GET","POST"])
@@ -416,22 +356,15 @@ def edit_appointment(id):
     appointment = appointment_dao.get_by_id(id)
     patients = patient_dao.get_all()
     doctors = doctor_dao.get_all()
-
     if request.method == "POST":
         data = request.form
         appointment.patient_id = int(data["patient_id"])
         appointment.doctor_id = int(data["doctor_id"])
         appointment.appointment_date = data["appointment_date"]
         appointment.description = data.get("description", "")
-        appointment_dao.update(appointment)
+        appointment_dao.update(appointment)  # ✅ dùng DAO update
         return redirect(url_for("appointments"))
-
-    return render_template(
-        "appointment/appointment_edit.html",
-        appointment=appointment,
-        patients=patients,
-        doctors=doctors
-    )
+    return render_template("appointment/appointment_edit.html", appointment=appointment, patients=patients, doctors=doctors)
 
 @app.route("/appointment/delete/<int:id>")
 @login_required()
@@ -439,70 +372,60 @@ def delete_appointment(id):
     appointment_dao.delete(id)
     return redirect(url_for("appointments"))
 
-# ====================
-# CRUD Service
-# ====================
+# CRUD DỊCH VỤ / LOẠI DỊCH VỤ (SERVICE / SERVICE TYPE)
 @app.route("/service-types")
 @login_required()
 def service_types():
-    return render_template("service/service_types.html", types=get_all_service_types())
+    return render_template("service/service_types.html", types=serviceType_dao.get_all_service_types())
 
 @app.route("/service-type/add", methods=["GET","POST"])
 @login_required(role="admin")
-def add_service_type_route():
+def add_service_type():
     if request.method == "POST":
-        add_service_type(request.form["name"])
+        name = request.form["name"]
+        serviceType_dao.add(name)
+        flash("Thêm loại dịch vụ thành công!")
         return redirect(url_for("service_types"))
     return render_template("service/service_type_add.html")
 
 @app.route("/services")
 @login_required()
 def services():
-    keyword = request.args.get("keyword", "").strip().lower()
-    all_services = get_all_services()
-
+    filter_by = request.args.get("filter_by", "name")  # Mặc định filter theo "name"
+    keyword = request.args.get("keyword", "").strip()
     if keyword:
-        all_services = [
-            s for s in all_services
-            if keyword in s['name'].lower() or keyword in s['type_name'].lower()
-        ]
-
+        all_services = service_dao.search(filter_by, keyword)
+    else:
+        all_services = service_dao.get_all_services()
     return render_template("service/services.html", services=all_services)
 
 @app.route("/service/add", methods=["GET","POST"])
 @login_required(role="admin")
-def add_service_route():
-    types = get_all_service_types()
+def add_service():
+    types = serviceType_dao.get_all_service_types()
     if request.method == "POST":
         data = request.form
-        add_service(data["name"], int(data["service_type_id"]), float(data["price"]))
+        service_dao.add_service(data["name"], int(data["service_type_id"]), float(data["price"]))
+        flash("Thêm dịch vụ thành công!")
         return redirect(url_for("services"))
     return render_template("service/service_add.html", types=types)
 
 @app.route("/service/edit/<int:id>", methods=["GET","POST"])
 @login_required(role="admin")
 def edit_service(id):
-    services = get_all_services()
-    service = next((s for s in services if s['id'] == id), None)
+    service = service_dao.get_service_by_id(id)
     if not service:
         flash("Dịch vụ không tồn tại!")
         return redirect(url_for("services"))
-
+    types = serviceType_dao.get_all_service_types()
     if request.method == "POST":
         data = request.form
-        db = get_connection()
-        cursor = db.cursor()
-        cursor.execute(
-            "UPDATE services SET name=%s, service_type_id=%s, price=%s WHERE id=%s",
-            (data["name"], int(data["service_type_id"]), float(data["price"]), id)
-        )
-        db.commit()
-        cursor.close()
-        db.close()
+        service.name = data["name"]
+        service.service_type_id = int(data["service_type_id"])
+        service.price = float(data["price"])
+        service_dao.update_service(service)  # ✅ dùng DAO update
         flash("Cập nhật dịch vụ thành công!")
         return redirect(url_for("services"))
-
-    types = get_all_service_types()
     return render_template("service/service_edit.html", service=service, types=types)
 
 @app.route("/service/delete/<int:id>")
@@ -517,139 +440,91 @@ def delete_service(id):
     flash("Xóa dịch vụ thành công!")
     return redirect(url_for("services"))
 
-# -----------------------
-# Medicine Types
-# -----------------------
+# CRUD THUỐC / LOẠI THUỐC (MEDICINE / MEDICINE TYPE)
 @app.route("/medicineTypes")
 @login_required()
 def medicine_types():
     keyword = request.args.get("keyword", "").strip().lower()
-    types = get_all_medicine_types()
-
+    types = medicineType_dao.get_all_medicine_types()
     if keyword:
-        types = [t for t in types if keyword in t['name'].lower()]
-
+        types = [t for t in types if keyword in t.name.lower()]
     return render_template("medicineType/medicineTypes.html", types=types)
 
 
 @app.route("/medicineType/add", methods=["GET","POST"])
 @login_required(role="admin")
-def add_medicine_type_route():
+def add_medicine_type():
     if request.method == "POST":
         name = request.form["name"]
-        add_medicine_type(name)
+        medicineType_dao.add_medicine_type(name)
         flash("Thêm loại thuốc thành công!")
         return redirect(url_for("medicine_types"))
     return render_template("medicineType/medicineType_add.html")
 
-@app.route("/medicineType/edit/<int:id>", methods=["GET","POST"])
+@app.route("/medicine-type/edit/<int:id>", methods=["GET", "POST"])
 @login_required(role="admin")
-def edit_medicine_type_route(id):
-    types = get_all_medicine_types()
-    type_obj = next((t for t in types if t['id'] == id), None)
-    if not type_obj:
+def edit_medicine_type(id):
+    type_to_edit = medicineType_dao.get_by_id(id)  # dùng instance đã init sẵn
+
+    if not type_to_edit:
         flash("Loại thuốc không tồn tại!")
         return redirect(url_for("medicine_types"))
 
     if request.method == "POST":
-        name = request.form["name"]
-        db = get_connection()
-        cursor = db.cursor()
-        cursor.execute("UPDATE medicine_types SET name=%s WHERE id=%s", (name, id))
-        db.commit()
-        cursor.close()
-        db.close()
+        new_name = request.form.get("name")
+        type_to_edit.name = new_name
+        medicineType_dao.update(type_to_edit)
         flash("Cập nhật loại thuốc thành công!")
         return redirect(url_for("medicine_types"))
 
-    return render_template("medicineType/medicineType_edit.html", type_obj=type_obj)
+    return render_template("medicineType/medicineType_edit.html", type_obj=type_to_edit)
 
-
-@app.route("/medicineType/delete/<int:id>")
+@app.route("/medicine-type/delete/<int:id>")
 @login_required(role="admin")
-def delete_medicine_type_route(id):
-    db = get_connection()
-    cursor = db.cursor()
+def delete_medicine_type(id):
+    # Gọi DAO để xóa
+    success = medicineType_dao.delete(id)
 
-    # Xóa tất cả thuốc thuộc loại này trước
-    cursor.execute("DELETE FROM medicines WHERE medicine_type_id=%s", (id,))
-
-    # Xóa loại thuốc
-    cursor.execute("DELETE FROM medicine_types WHERE id=%s", (id,))
-
-    db.commit()
-    cursor.close()
-    db.close()
-    flash("Xóa loại thuốc thành công!")
     return redirect(url_for("medicine_types"))
 
-
-# -----------------------
-# Medicines
-# -----------------------
 @app.route("/medicines")
 @login_required()
 def medicines():
-    keyword = request.args.get("keyword", "").strip().lower()
-    type_id = request.args.get("type_id", "")
-
-    meds = get_all_medicines()
-    types = get_all_medicine_types()  # để truyền ra dropdown
-
-    # Lọc theo tên
-    if keyword:
-        meds = [m for m in meds if keyword in m['name'].lower()]
-
-    # Lọc theo loại
-    if type_id:
-        try:
-            type_id_int = int(type_id)
-            meds = [m for m in meds if m['medicine_type_id'] == type_id_int]
-        except ValueError:
-            meds = []
-
+    keyword = request.args.get("keyword", "").strip()
+    type_id = request.args.get("type_id")
+    type_id_int = int(type_id) if type_id else None
+    meds = medicine_dao.search_medicines(keyword, type_id_int)
+    types = medicineType_dao.get_all_medicine_types()
     return render_template("medicine/medicines.html", medicines=meds, types=types)
-
 
 @app.route("/medicine/add", methods=["GET","POST"])
 @login_required(role="admin")
-def add_medicine_route():
-    types = get_all_medicine_types()
+def add_medicine():
+    types = medicineType_dao.get_all_medicine_types()
     if request.method == "POST":
         data = request.form
-        add_medicine(
-            data["name"],
-            int(data["medicine_type_id"]),
-            float(data["price"])
-        )
+        medicine_dao.add_medicine(data["name"], int(data["medicine_type_id"]), float(data["price"]))
         flash("Thêm thuốc thành công!")
         return redirect(url_for("medicines"))
     return render_template("medicine/medicine_add.html", types=types)
 
+# CRUD THUỐC / LOẠI THUỐC (MEDICINE / MEDICINE TYPE)
 @app.route("/medicine/edit/<int:id>", methods=["GET","POST"])
 @login_required(role="admin")
 def edit_medicine(id):
-    meds = get_all_medicines()
-    medicine = next((m for m in meds if m['id'] == id), None)
+    medicine = medicine_dao.get_by_id(id)
     if not medicine:
         flash("Thuốc không tồn tại!")
         return redirect(url_for("medicines"))
-
-    types = get_all_medicine_types()
+    types = medicineType_dao.get_all_medicine_types()
     if request.method == "POST":
         data = request.form
-        db = get_connection()
-        cursor = db.cursor()
-        cursor.execute(
-            "UPDATE medicines SET name=%s, medicine_type_id=%s, price=%s WHERE id=%s",
-            (data["name"], int(data["medicine_type_id"]), float(data["price"]), id)
-        )
-        db.commit()
-        cursor.close()
-        db.close()
+        medicine.name = data["name"]
+        medicine.medicine_type_id = int(data["medicine_type_id"])
+        medicine.price = float(data["price"])
+        medicine_dao.update_medicine(medicine)  # ✅ dùng DAO update
         flash("Cập nhật thuốc thành công!")
         return redirect(url_for("medicines"))
-
     return render_template("medicine/medicine_edit.html", medicine=medicine, types=types)
 
 @app.route("/medicine/delete/<int:id>")
@@ -664,9 +539,7 @@ def delete_medicine(id):
     flash("Xóa thuốc thành công!")
     return redirect(url_for("medicines"))
 
-# ==========================
-# CRUD Bills + Thanh toán + In hóa đơn
-# ==========================
+# CRUD HÓA ĐƠN / THANH TOÁN (BILLS / PAYMENT)
 @app.route("/bills")
 @login_required()
 def bills():
@@ -683,13 +556,11 @@ def add_bill(appointment_id):
     if not appointment:
         flash("Lịch hẹn không tồn tại!")
         return redirect(url_for("appointments"))
-
     if request.method == "POST":
         amount = float(request.form["amount"])
         bill_dao.create_from_appointment(appointment_id, amount)
         flash("Tạo hóa đơn thành công!")
         return redirect(url_for("bills"))
-
     return render_template("bill/bill_add.html", appointment=appointment)
 
 @app.route("/bill/pay/<int:id>", methods=["GET","POST"])
@@ -699,13 +570,11 @@ def pay_bill(id):
     if not bill:
         flash("Hóa đơn không tồn tại!")
         return redirect(url_for("bills"))
-
     if request.method == "POST":
         payment_method = request.form["payment_method"]
         bill_dao.update_status(bill.id, "Đã thanh toán", payment_method)
         flash("Thanh toán thành công!")
         return redirect(url_for("bills"))
-
     return render_template("bill/bill_pay.html", bill=bill)
 
 @app.route("/bill/print/<int:id>")
@@ -719,8 +588,7 @@ def print_bill(id):
     patient = patient_dao.get_by_id(appointment.patient_id)
     doctor = doctor_dao.get_by_id(appointment.doctor_id)
     return render_template("bill/bill_print.html", bill=bill, appointment=appointment, patient=patient, doctor=doctor)
-# ====================
+
 # RUN SERVER
-# ====================
 if __name__ == "__main__":
     app.run(debug=True)

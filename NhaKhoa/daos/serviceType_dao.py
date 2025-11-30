@@ -1,19 +1,37 @@
-import pymysql
-from NhaKhoa.database.db import get_connection
+from NhaKhoa.models.serviceType import ServiceType
+from NhaKhoa.database.db import get_session
 
-def get_all_service_types():
-    db = get_connection()
-    cursor = db.cursor(pymysql.cursors.DictCursor)
-    cursor.execute("SELECT * FROM service_types")
-    types = cursor.fetchall()
-    cursor.close()
-    db.close()
-    return types
+class ServiceTypeDAO:
+    def get_all_service_types(self):
+        with get_session() as session:
+            return session.query(ServiceType).all()
 
-def add_service_type(name):
-    db = get_connection()
-    cursor = db.cursor()
-    cursor.execute("INSERT INTO service_types (name) VALUES (%s)", (name,))
-    db.commit()
-    cursor.close()
-    db.close()
+    def get_by_id(self, id: int):
+        with get_session() as session:
+            return session.get(ServiceType, id)
+
+    def add(self, name: str):
+        with get_session() as session:
+            service_type = ServiceType(name=name)
+            session.add(service_type)
+            session.commit()  # commit bắt buộc
+
+    def update(self, service_type: ServiceType):
+        with get_session() as session:
+            session.merge(service_type)  # merge để update object detached
+            session.commit()
+
+    def delete(self, service_type: ServiceType):
+        with get_session() as session:
+            session.delete(service_type)
+            session.commit()
+    def search(self, keyword: str):
+        with get_session() as session:
+            return session.query(ServiceType) \
+                .filter(ServiceType.name.ilike(f"%{keyword}%")) \
+                .all()
+
+    def update(self, service_type: ServiceType):
+        with get_session() as session:
+            session.merge(service_type)
+            session.commit()
