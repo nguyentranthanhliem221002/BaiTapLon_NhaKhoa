@@ -12,4 +12,4 @@ class Bill(Base):
     payment_method = Column(String(50), nullable=True)
     created_at = Column(DateTime, nullable=True)
 
-    appointment = relationship("NhaKhoa.models.appointment.Appointment", back_populates="bills")
+    appointment = relationship("Appointment", back_populates="bills")

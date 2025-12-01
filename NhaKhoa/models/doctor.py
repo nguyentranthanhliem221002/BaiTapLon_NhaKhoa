@@ -15,6 +15,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from NhaKhoa.models.base import Base
+from NhaKhoa.models import user
 
 class Doctor(Base):
     __tablename__ = "doctors"
@@ -22,7 +23,7 @@ class Doctor(Base):
 
     specialty = Column(String(100))
     phone = Column(String(20), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey('users.id'), default=1)
 
-    user = relationship("User", back_populates="doctors")
-    appointments = relationship("Appointment", back_populates="doctor")
+    appointments = relationship("Appointment", back_populates="doctor", lazy=True)
+    user = relationship('User', back_populates='doctor', uselist=False)

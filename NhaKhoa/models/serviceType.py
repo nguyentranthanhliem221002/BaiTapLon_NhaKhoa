@@ -9,4 +9,4 @@ from NhaKhoa.models.base import Base
 class ServiceType(Base):
     __tablename__ = "service_types"
 
-    services = relationship('ServiceType', backref='service', lazy=True)
+    services = relationship('Service', back_populates='service_type', lazy=True)

@@ -27,5 +27,5 @@ class User(Base):
     password = Column(String(255), nullable=False)
     role = Column(Enum(RoleEnum), nullable=False, default=RoleEnum.USER)
 
-    doctors = relationship("Doctor", back_populates="user")
-    patients = relationship("Patient", back_populates="user")
+    doctor = relationship("Doctor", back_populates="user", uselist=False)
+    patient = relationship("Patient", back_populates="user", uselist=False)

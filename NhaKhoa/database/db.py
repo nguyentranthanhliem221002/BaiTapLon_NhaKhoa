@@ -7,6 +7,7 @@ import bcrypt
 
 from NhaKhoa import DB_USER, DB_PASSWORD, DB_HOST, DB_NAME, DB_CHARSET, SQLALCHEMY_DATABASE_URI, data
 from NhaKhoa.models.base import Base
+from NhaKhoa.models.role import RoleEnum
 
 # ==============================
 # TẠO DATABASE NẾU CHƯA CÓ
@@ -57,30 +58,30 @@ def init_database():
         # --- Users ---
         if db.scalar(select(func.count()).select_from(User)) == 0: #this line error
             users = [
-                ("admin", "admin@example.com", "admin123", "admin"),
-                ("doctor", "doctor@example.com", "123456", "doctor"),
-                ("patient", "patient@example.com", "123456", "patient")
+                ("admin", "admin@example.com", "admin123", RoleEnum.ADMIN),
+                ("doctor", "doctor@example.com", "123456", RoleEnum.DOCTOR),
+                ("patient", "patient@example.com", "123456", RoleEnum.PATIENT)
             ]
             for name, email, pwd, role in users:
                 hashed = bcrypt.hashpw(pwd.encode(), bcrypt.gensalt()).decode()
-                db.add(User(username=name, email=email, password=hashed, role=role))
+                db.add(User(name=name, email=email, password=hashed, role=role))
             db.commit()
 
         # --- Doctors ---
         if db.scalar(select(func.count()).select_from(Doctor)) == 0:
-            doctor_user = db.scalar(select(User).where(User.role == "doctor"))
+            doctor_user = db.scalar(select(User).where(User.role == RoleEnum.DOCTOR))
             db.add_all([
-                Doctor(name="Dr. Nam", specialty="Nha chu", phone="0901123456", user_id=doctor_user.id),
-                Doctor(name="Dr. Hoa", specialty="Chỉnh nha", phone="0902876543", user_id=doctor_user.id)
+                Doctor(name="Dr. Nam", specialty="Nha chu", phone="0901123456"),
+                Doctor(name="Dr. Hoa", specialty="Chỉnh nha", phone="0902876543")
             ])
             db.commit()
 
         # --- Patients ---
         if db.scalar(select(func.count()).select_from(Patient)) == 0:
-            patient_user = db.scalar(select(User).where(User.role == "patient"))
+            patient_user = db.scalar(select(User).where(User.role == RoleEnum.PATIENT))
             db.add_all([
-                Patient(name="Nguyen Van A", age=25, phone="0901123456", address="Ha Noi", user_id=patient_user.id),
-                Patient(name="Tran Thi B", age=30, phone="0902987654", address="Da Nang", user_id=patient_user.id)
+                Patient(name="Nguyen Van A", age=25, phone="0901123456", address="Ha Noi"),
+                Patient(name="Tran Thi B", age=30, phone="0902987654", address="Da Nang")
             ])
             db.commit()
 
