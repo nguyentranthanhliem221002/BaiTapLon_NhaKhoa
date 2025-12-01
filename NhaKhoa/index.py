@@ -6,7 +6,8 @@ import secrets
 from datetime import datetime, timedelta
 import requests
 import json
-
+from werkzeug.utils import secure_filename
+import os
 from flask_mail import Mail, Message
 from oauthlib.oauth2 import WebApplicationClient
 
@@ -86,6 +87,12 @@ medicineType_dao = MedicineTypeDAO()
 @login_required()
 def dashboard():
     return render_template("index.html", user=session["user"], role=session["role"])
+
+# Search
+@app.route("/search")
+def search():
+    query = request.args.get("q", "")
+    return f"Bạn đã tìm: {query}"
 
 # ACCOUNT: REGISTER / LOGIN / LOGOUT
 @app.route("/account/register", methods=["GET","POST"])
@@ -249,30 +256,144 @@ def patients():
         all_patients = patient_dao.get_all()
 
     return render_template("patient/patients.html", patients=all_patients)
+# CRUD Patient với ảnh
 
-@app.route("/patient/add", methods=["GET","POST"])
+@app.route("/patient/add", methods=["GET", "POST"])
 @login_required()
 def add_patient():
     if request.method == "POST":
         data = request.form
-        new_patient = Patient(name=data["name"], age=int(data["age"]), phone=data["phone"], address=data["address"])
-        patient_dao.add(new_patient)
-        return redirect(url_for("patients"))
-    return render_template("patient/patient_add.html")
+        new_patient = Patient(
+            name=data["name"],
+            age=int(data["age"]),
+            phone=data["phone"],
+            address=data["address"]
+        )
 
-@app.route("/patient/edit/<int:id>", methods=["GET","POST"])
+        # Upload ảnh
+        file = request.files.get('image')
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            upload_folder = os.path.join(app.static_folder, 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)  # tạo folder nếu chưa có
+            file.save(os.path.join(upload_folder, filename))
+            new_patient.image = filename  # gán tên file vào model
+
+        patient_dao.add(new_patient)
+        flash("Thêm bệnh nhân thành công!")
+        return redirect(url_for("patients"))
+
+    return render_template("patient/patient_add.html")
+@app.route("/patient/doctors")
+@login_required(role="patient")
+def patient_doctors():
+    doctors = doctor_dao.get_all()
+
+    doctor_id = request.args.get("doctor_id")
+    if doctor_id:
+        try:
+            doctor_id_int = int(doctor_id)
+            doctors = [d for d in doctors if d.id == doctor_id_int]
+        except ValueError:
+            pass
+
+    return render_template("patient/patient_doctors.html", doctors=doctors)
+
+@app.route("/my_appointments")
+@login_required(role="patient")
+def my_appointments():
+    user = user_dao.get_by_username(session["user"])
+    patient = patient_dao.get_by_user_id(user.id)
+    if not patient:
+        flash("Bệnh nhân không tồn tại!")
+        return redirect(url_for("dashboard"))
+
+    appointments = appointment_dao.get_by_patient_id(patient.id)
+    doctors = doctor_dao.get_all()  # thêm danh sách bác sĩ
+
+    events = []
+    for appt in appointments:
+        events.append({
+            "id": appt.id,
+            "title": f"{appt.doctor.name}",
+            "start": appt.appointment_date.strftime("%Y-%m-%d"),
+            "description": appt.description
+        })
+
+    return render_template("patient/patient_appointments.html", events=events, doctors=doctors)
+@app.route("/appointment/add_ajax", methods=["POST"])
+@login_required(role="patient")
+def add_appointment_ajax():
+    data = request.json
+    user = user_dao.get_by_username(session["user"])
+    patient = patient_dao.get_by_user_id(user.id)
+
+    new_appointment = Appointment(
+        patient_id=patient.id,
+        doctor_id=int(data["doctor_id"]),
+        appointment_date=datetime.fromisoformat(data["appointment_date"]),
+        description=data.get("description", "")
+    )
+    appointment_dao.add(new_appointment)
+    doctor = doctor_dao.get_by_id(new_appointment.doctor_id)
+    return {"success": True, "id": new_appointment.id, "doctor_name": doctor.name}
+
+
+
+@app.route("/patient/edit/<int:id>", methods=["GET", "POST"])
 @login_required()
 def edit_patient(id):
     patient = patient_dao.get_by_id(id)
+    if not patient:
+        flash("Bệnh nhân không tồn tại!")
+        return redirect(url_for("patients"))
+
     if request.method == "POST":
         data = request.form
         patient.name = data["name"]
         patient.age = int(data["age"])
         patient.phone = data["phone"]
         patient.address = data["address"]
-        patient_dao.update(patient)  # ✅ dùng DAO update
+
+        # Upload ảnh mới nếu có
+        file = request.files.get('image')
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            upload_folder = os.path.join(app.static_folder, 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+            file.save(os.path.join(upload_folder, filename))
+            patient.image = filename  # cập nhật ảnh mới
+
+        patient_dao.update(patient)
+        flash("Cập nhật bệnh nhân thành công!")
         return redirect(url_for("patients"))
+
     return render_template("patient/patient_edit.html", patient=patient)
+
+#
+# @app.route("/patient/add", methods=["GET","POST"])
+# @login_required()
+# def add_patient():
+#     if request.method == "POST":
+#         data = request.form
+#         new_patient = Patient(name=data["name"], age=int(data["age"]), phone=data["phone"], address=data["address"])
+#         patient_dao.add(new_patient)
+#         return redirect(url_for("patients"))
+#     return render_template("patient/patient_add.html")
+#
+# @app.route("/patient/edit/<int:id>", methods=["GET","POST"])
+# @login_required()
+# def edit_patient(id):
+#     patient = patient_dao.get_by_id(id)
+#     if request.method == "POST":
+#         data = request.form
+#         patient.name = data["name"]
+#         patient.age = int(data["age"])
+#         patient.phone = data["phone"]
+#         patient.address = data["address"]
+#         patient_dao.update(patient)  # ✅ dùng DAO update
+#         return redirect(url_for("patients"))
+#     return render_template("patient/patient_edit.html", patient=patient)
 
 @app.route("/patient/delete/<int:id>")
 @login_required()
@@ -292,15 +413,52 @@ def doctors():
         all_doctors = doctor_dao.get_all()
     return render_template("doctor/doctors.html", doctors=all_doctors)
 
+# @app.route("/doctor/add", methods=["GET","POST"])
+# @login_required(role="admin")
+# def add_doctor():
+#     if request.method == "POST":
+#         data = request.form
+#         new_doctor = Doctor(name=data["name"], specialty=data["specialty"], phone=data["phone"])
+#         doctor_dao.add(new_doctor)
+#         return redirect(url_for("doctors"))
+#     return render_template("doctor/doctor_add.html")
+
 @app.route("/doctor/add", methods=["GET","POST"])
 @login_required(role="admin")
 def add_doctor():
     if request.method == "POST":
         data = request.form
-        new_doctor = Doctor(name=data["name"], specialty=data["specialty"], phone=data["phone"])
+        new_doctor = Doctor(
+            name=data["name"],
+            specialty=data["specialty"],
+            phone=data["phone"]
+        )
+
+        # Upload ảnh
+        file = request.files.get('image')
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            upload_folder = os.path.join(app.static_folder, 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)  # tạo folder nếu chưa có
+            file.save(os.path.join(upload_folder, filename))
+            new_doctor.image = filename
+
         doctor_dao.add(new_doctor)
         return redirect(url_for("doctors"))
     return render_template("doctor/doctor_add.html")
+
+# @app.route("/doctor/edit/<int:id>", methods=["GET","POST"])
+# @login_required(role="admin")
+# def edit_doctor(id):
+#     doctor = doctor_dao.get_by_id(id)
+#     if request.method == "POST":
+#         data = request.form
+#         doctor.name = data["name"]
+#         doctor.specialty = data["specialty"]
+#         doctor.phone = data["phone"]
+#         doctor_dao.update(doctor)  # ✅ dùng DAO update
+#         return redirect(url_for("doctors"))
+#     return render_template("doctor/doctor_edit.html", doctor=doctor)
 
 @app.route("/doctor/edit/<int:id>", methods=["GET","POST"])
 @login_required(role="admin")
@@ -311,7 +469,15 @@ def edit_doctor(id):
         doctor.name = data["name"]
         doctor.specialty = data["specialty"]
         doctor.phone = data["phone"]
-        doctor_dao.update(doctor)  # ✅ dùng DAO update
+
+        # Upload ảnh
+        file = request.files.get('image')
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.static_folder, 'uploads', filename))
+            doctor.image = filename
+
+        doctor_dao.update(doctor)
         return redirect(url_for("doctors"))
     return render_template("doctor/doctor_edit.html", doctor=doctor)
 

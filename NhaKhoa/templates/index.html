@@ -3,17 +3,11 @@
 {% block title %}Trang chủ - Phòng khám Nha khoa{% endblock %}
 
 {% block content %}
-<div class="container text-center mt-5" style="max-width: 700px;">
-    <h1 class="display-4 mb-4">Chào mừng đến với Hệ thống Phòng khám Nha khoa</h1>
+<div class="container text-center" style="max-width: 700px;">
+    <h1 class="display-4">Chào mừng đến với Hệ thống Phòng khám Nha khoa</h1>
 
     {% if session.get('user') %}
         <p class="lead">Xin chào, <strong>{{ session['user'] }}</strong></p>
-<!--        <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">-->
-<!--            <a class="btn btn-primary btn-lg" href="{{ url_for('patients') }}">Danh sách bệnh nhân</a>-->
-<!--            <a class="btn btn-secondary btn-lg" href="{{ url_for('appointments') }}">Danh sách lịch hẹn</a>-->
-<!--            <a class="btn btn-info btn-lg" href="{{ url_for('doctors') }}">Danh sách bác sĩ</a>-->
-<!--        </div>-->
-
     {% else %}
         <p class="lead">Vui lòng đăng nhập để quản lý hệ thống</p>
         <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">
@@ -22,4 +16,40 @@
         </div>
     {% endif %}
 </div>
+
+<div class="container-fluid mt-5 p-4" style="background-color: #198754;">
+    <h2 class="text-white text-center mb-4">Dịch vụ của chúng tôi</h2>
+
+    <div id="serviceCarousel" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+
+            {% set services = [1,2,3,4,5,6,7,8,9] %}  {# ví dụ 9 dịch vụ #}
+            {% for i in range(0, services|length, 3) %}
+            <div class="carousel-item {% if i == 0 %}active{% endif %}">
+                <div class="d-flex justify-content-center">
+                    {% for j in range(3) %}
+                        {% if services[i+j] is defined %}
+                        <img src="{{ url_for('static', filename='images/image_service_test.png') }}"
+                             class="d-block mx-5" style="max-height:200px; width:150px; object-fit:cover; border-radius: 8px;"
+                             alt="Service {{ i+j+1 }}">
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+
+        <!-- Nút điều hướng -->
+        <button class="carousel-control-prev" type="button" data-bs-target="#serviceCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Trước</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#serviceCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Tiếp</span>
+        </button>
+    </div>
+</div>
+
 {% endblock %}

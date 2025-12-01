@@ -4,6 +4,7 @@ from datetime import datetime
 from NhaKhoa.models.doctor import Doctor
 from NhaKhoa.models.appointment import Appointment
 from NhaKhoa.models.patient import Patient
+from sqlalchemy import Date
 
 class AppointmentDAO:
     def get_all(self):
@@ -27,7 +28,11 @@ class AppointmentDAO:
         with get_session() as session:
             session.add(appointment)
             session.commit()
-
+    def get_by_patient_id(self, patient_id: int):
+        with get_session() as session:
+            return session.query(Appointment) \
+                .options(joinedload(Appointment.patient), joinedload(Appointment.doctor)) \
+                .filter(Appointment.patient_id == patient_id).all()
     def delete(self, id: int):
         with get_session() as session:
             appt = session.get(Appointment, id)
@@ -50,6 +55,7 @@ class AppointmentDAO:
                 except ValueError:
                     return []
             return query.all()
+
     def update(self, appointment: Appointment):
         with get_session() as session:
             session.merge(appointment)

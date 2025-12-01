@@ -12,17 +12,31 @@ class PatientDAO:
         with get_session() as session:
             return session.get(Patient, id)
 
+    # def add(self, patient: Patient):
+    #     with get_session() as session:
+    #         session.add(patient)
+    #         session.commit()
+    #
+    #         username = patient.phone
+    #         raw_password = "1"
+    #         hashed_password = bcrypt.hashpw(raw_password.encode(), bcrypt.gensalt()).decode()
+    #
+    #         user = User(username=username, password=hashed_password, email="", role="patient")
+    #         session.add(user)
+    #         session.commit()
     def add(self, patient: Patient):
         with get_session() as session:
-            session.add(patient)
-            session.commit()
-
+            # Tạo User trước
             username = patient.phone
             raw_password = "1"
             hashed_password = bcrypt.hashpw(raw_password.encode(), bcrypt.gensalt()).decode()
-
             user = User(username=username, password=hashed_password, email="", role="patient")
             session.add(user)
+            session.commit()
+
+            # Gán user_id cho Patient
+            patient.user_id = user.id
+            session.add(patient)
             session.commit()
 
     def update(self, patient: Patient):
@@ -51,3 +65,6 @@ class PatientDAO:
             elif filter_by == "phone":
                 query = query.filter(Patient.phone.ilike(f"%{keyword}%"))
             return query.all()
+    def get_by_user_id(self, user_id: int):
+        with get_session() as session:
+            return session.query(Patient).filter(Patient.user_id == user_id).first()
