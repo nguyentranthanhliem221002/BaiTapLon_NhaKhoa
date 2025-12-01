@@ -8,8 +8,10 @@ import requests
 import json
 
 from flask_mail import Mail, Message
+from flask_sqlalchemy import SQLAlchemy
 from oauthlib.oauth2 import WebApplicationClient
 
+from NhaKhoa import app
 # Import DAO và Models
 from NhaKhoa.database.db import init_database, get_connection
 from daos.user_dao import UserDAO
@@ -27,13 +29,6 @@ from NhaKhoa.models.patient import Patient
 from NhaKhoa.models.doctor import Doctor
 from NhaKhoa.models.appointment import Appointment
 
-# INIT APP
-app = Flask(__name__)
-app.secret_key = "supersecretkey"
-
-
-# INIT DATABASE
-init_database()
 
 # CONFIG FLASK-MAIL
 app.config.update(
@@ -591,4 +586,7 @@ def print_bill(id):
 
 # RUN SERVER
 if __name__ == "__main__":
-    app.run(debug=True)
+    with app.app_context():
+        init_database()
+        app.run(debug=True)
+

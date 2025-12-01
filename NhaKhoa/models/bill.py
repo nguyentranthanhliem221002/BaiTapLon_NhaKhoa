@@ -1,12 +1,11 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from NhaKhoa.database.db import Base
+from NhaKhoa.models.base import Base
 
 class Bill(Base):
     __tablename__ = "bills"
     __table_args__ = {"extend_existing": True}
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
     appointment_id = Column(Integer, ForeignKey("appointments.id"), nullable=False)
     amount = Column(Integer, default=0)
     status = Column(String(50), default="Chưa thanh toán")

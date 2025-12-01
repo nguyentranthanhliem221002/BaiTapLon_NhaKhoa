@@ -5,13 +5,8 @@ from contextlib import contextmanager
 import pymysql
 import bcrypt
 
-# ==============================
-# CẤU HÌNH DATABASE
-DB_USER = "root"
-DB_PASSWORD = ""
-DB_HOST = "localhost"
-DB_NAME = "nha_khoa"
-DB_CHARSET = "utf8mb4"
+from NhaKhoa import DB_USER, DB_PASSWORD, DB_HOST, DB_NAME, DB_CHARSET, SQLALCHEMY_DATABASE_URI, data
+from NhaKhoa.models.base import Base
 
 # ==============================
 # TẠO DATABASE NẾU CHƯA CÓ
@@ -25,11 +20,11 @@ with temp_engine.connect() as conn:
 
 # ==============================
 # ENGINE CHÍNH + SESSION
-DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}?charset={DB_CHARSET}"
-engine = create_engine(DATABASE_URL, echo=False, future=True)
+
+engine = create_engine(SQLALCHEMY_DATABASE_URI, echo=False, future=True)
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
-Base = declarative_base()
+
 
 # ==============================
 # IMPORT MODEL
@@ -60,15 +55,15 @@ def init_database():
 
     with get_session() as db:
         # --- Users ---
-        if db.scalar(select(func.count()).select_from(User)) == 0:
+        if db.scalar(select(func.count()).select_from(User)) == 0: #this line error
             users = [
                 ("admin", "admin@example.com", "admin123", "admin"),
                 ("doctor", "doctor@example.com", "123456", "doctor"),
                 ("patient", "patient@example.com", "123456", "patient")
             ]
-            for username, email, pwd, role in users:
+            for name, email, pwd, role in users:
                 hashed = bcrypt.hashpw(pwd.encode(), bcrypt.gensalt()).decode()
-                db.add(User(username=username, email=email, password=hashed, role=role))
+                db.add(User(username=name, email=email, password=hashed, role=role))
             db.commit()
 
         # --- Doctors ---
@@ -133,3 +128,6 @@ def get_connection():
         database=DB_NAME,
         cursorclass=pymysql.cursors.DictCursor
     )
+
+if __name__ == "__main__":
+    init_database()
