@@ -7,7 +7,8 @@ import bcrypt
 
 from NhaKhoa import DB_USER, DB_PASSWORD, DB_HOST, DB_NAME, DB_CHARSET, SQLALCHEMY_DATABASE_URI, data
 from NhaKhoa.models.base import Base
-from NhaKhoa.models.role import RoleEnum
+from NhaKhoa.models.role import RoleEnum, Role
+from NhaKhoa.models.specialty import Specialty
 
 # ==============================
 # TẠO DATABASE NẾU CHƯA CÓ
@@ -55,30 +56,49 @@ def init_database():
     Base.metadata.create_all(bind=engine)
 
     with get_session() as db:
+        # --- Roles ---
+        if db.scalar(select(func.count()).select_from(Role)) == 0:
+            db.add_all([
+                Role(name="user", description="Regular user"),
+                Role(name="patient", description="Patient"),
+                Role(name="doctor", description="Doctor"),
+                Role(name="admin", description="Administrator")
+            ])
+            db.commit()
         # --- Users ---
         if db.scalar(select(func.count()).select_from(User)) == 0: #this line error
             users = [
-                ("admin", "admin@example.com", "admin123", RoleEnum.ADMIN),
-                ("doctor", "doctor@example.com", "123456", RoleEnum.DOCTOR),
-                ("patient", "patient@example.com", "123456", RoleEnum.PATIENT)
+                ("admin", "admin@example.com", "admin123", RoleEnum.ADMIN.value),
+                ("doctor", "doctor@example.com", "123456", RoleEnum.DOCTOR.value),
+                ("patient", "patient@example.com", "123456", RoleEnum.PATIENT.value)
             ]
             for name, email, pwd, role in users:
                 hashed = bcrypt.hashpw(pwd.encode(), bcrypt.gensalt()).decode()
-                db.add(User(name=name, email=email, password=hashed, role=role))
+                db.add(User(name=name, email=email, password=hashed, role_id=role))
             db.commit()
+
+        # --- Specialties ---
+        if db.scalar(select(func.count()).select_from(Specialty)) == 0:
+            doctor_user = db.scalar(select(User).where(User.role_id == RoleEnum.DOCTOR.value))
+            if doctor_user:
+                db.add_all([
+                    Specialty(name="Khám tổng quát", description="Khám sức khỏe tổng quát"),
+                    Specialty(name="Nha khoa thẩm mỹ", description="Chuyên về thẩm mỹ răng miệng")
+                ])
+                db.commit()
 
         # --- Doctors ---
         if db.scalar(select(func.count()).select_from(Doctor)) == 0:
-            doctor_user = db.scalar(select(User).where(User.role == RoleEnum.DOCTOR))
+            doctor_user = db.scalar(select(User).where(User.role_id == RoleEnum.DOCTOR.value))
             db.add_all([
-                Doctor(name="Dr. Nam", specialty="Nha chu", phone="0901123456"),
-                Doctor(name="Dr. Hoa", specialty="Chỉnh nha", phone="0902876543")
+                Doctor(name="Dr. Nam", specialty_id=1, phone="0901123456"),
+                Doctor(name="Dr. Hoa", specialty_id=2, phone="0902876543")
             ])
             db.commit()
 
         # --- Patients ---
         if db.scalar(select(func.count()).select_from(Patient)) == 0:
-            patient_user = db.scalar(select(User).where(User.role == RoleEnum.PATIENT))
+            patient_user = db.scalar(select(User).where(User.role_id == RoleEnum.PATIENT.value))
             db.add_all([
                 Patient(name="Nguyen Van A", age=25, phone="0901123456", address="Ha Noi"),
                 Patient(name="Tran Thi B", age=30, phone="0902987654", address="Da Nang")
@@ -130,5 +150,3 @@ def get_connection():
         cursorclass=pymysql.cursors.DictCursor
     )
 
-if __name__ == "__main__":
-    init_database()

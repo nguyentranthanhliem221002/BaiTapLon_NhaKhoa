@@ -13,10 +13,12 @@
 #     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 from email.policy import default
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from NhaKhoa.models.base import Base
 from NhaKhoa.models import user
+from NhaKhoa.models.role import RoleEnum
+
 
 class Patient(Base):
     __tablename__ = "patients"
@@ -24,7 +26,9 @@ class Patient(Base):
     age = Column(Integer, nullable=False)
     phone = Column(String(20), nullable=False)
     address = Column(String(255))
-    user_id = Column(Integer, ForeignKey('users.id'), default=2)
+    user_id = Column(Integer, ForeignKey('users.id'), default=2) # theo db.py
+    role_id = Column(Integer, ForeignKey("roles.id"), default=RoleEnum.PATIENT.value)
 
     appointments = relationship("Appointment", back_populates="patient", lazy=True)
     user = relationship('User', back_populates='patient')
+    role = relationship('Role', back_populates='patients', lazy=True)

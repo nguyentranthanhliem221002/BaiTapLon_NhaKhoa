@@ -12,6 +12,7 @@ from flask_sqlalchemy import SQLAlchemy
 from oauthlib.oauth2 import WebApplicationClient
 
 from NhaKhoa import app
+from NhaKhoa.daos.specialty_dao import SpecialtyDAO
 # Import DAO và Models
 from NhaKhoa.database.db import init_database, get_connection
 from daos.user_dao import UserDAO
@@ -74,6 +75,7 @@ service_dao = ServiceDAO()
 serviceType_dao = ServiceTypeDAO()
 medicine_dao = MedicineDAO()
 medicineType_dao = MedicineTypeDAO()
+specialty_dao = SpecialtyDAO()
 
 # DASHBOARD
 @app.route("/")
@@ -112,8 +114,8 @@ def login():
         password = request.form["password"]
         user = user_dao.login(username_or_email, password)
         if user:
-            session["user"] = user.username
-            session["role"] = user.role
+            session["user"] = user.name
+            session["role"] = user.role_id
             return redirect(url_for("dashboard"))
         return render_template("account/login.html", error="Sai tài khoản hoặc mật khẩu!")
     return render_template("account/login.html")
@@ -332,18 +334,34 @@ def appointments():
 @login_required()
 def add_appointment():
     patients = patient_dao.get_all()
-    doctors = doctor_dao.get_all()
-    if request.method == "POST":
-        data = request.form
-        new_appointment = Appointment(
-            patient_id=int(data["patient_id"]),
-            doctor_id=int(data["doctor_id"]),
-            appointment_date=data["appointment_date"],
-            description=data.get("description", "")
-        )
-        appointment_dao.add(new_appointment)
-        return redirect(url_for("appointments"))
-    return render_template("appointment/appointment_add.html", patients=patients, doctors=doctors)
+    specialties = specialty_dao.get_all()
+
+    specialty_id = request.args.get('specialty_id', type=int)
+    patient_id = request.args.get('patient_id', type=int)
+
+    doctors = []
+    if specialty_id:
+        doctors = doctor_dao.get_doctors_by_specialty(specialty_id)
+    #
+    # if request.method == "POST":
+    #     data = request.form
+    #     specialty_id = int(request.form.get('specialty_id'))
+    #     id = int(data["patient_id"])
+    #     doctors = doctor_dao.get_doctors_by_specialty(specialty_id)
+    #     new_appointment = Appointment(
+    #         patient_id=id,
+    #         doctor_id=int(data["doctor_id"]),
+    #         appointment_date=data["appointment_date"],
+    #         description=data.get("description", "")
+    #     )
+    #     appointment_dao.add(new_appointment)
+    #     return redirect(url_for("appointments"))
+    return render_template("appointment/appointment_add.html",
+                           patients=patients,
+                           doctors=doctors,
+                           specialties=specialties,
+                           selected_specialty=specialty_id,
+                           selected_patient=patient_id)
 
 @app.route("/appointment/edit/<int:id>", methods=["GET","POST"])
 @login_required()

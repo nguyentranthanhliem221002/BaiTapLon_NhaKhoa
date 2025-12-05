@@ -1,3 +1,5 @@
+from sqlalchemy import Date
+
 from NhaKhoa.database.db import get_session
 from sqlalchemy.orm import joinedload
 from datetime import datetime

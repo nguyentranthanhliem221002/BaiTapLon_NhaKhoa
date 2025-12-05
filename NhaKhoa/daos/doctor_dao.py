@@ -95,3 +95,10 @@ class DoctorDAO:
             elif filter_by == "phone":
                 query = query.filter(Doctor.phone.ilike(f"%{keyword}%"))
             return query.all()
+
+    def get_doctors_by_specialty(self, specialty_id: int):
+        """Get all doctors with the given specialty_id."""
+        with get_session() as session:
+            return session.query(Doctor).filter(Doctor.specialty_id == specialty_id).all()
+
+

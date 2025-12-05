@@ -14,7 +14,7 @@
 #     reset_token = Column(String(255), nullable=True)
 #     reset_token_expiry = Column(DateTime, nullable=True)
 #
-from sqlalchemy import Column, Integer, String, Enum
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey
 from sqlalchemy.orm import relationship
 from NhaKhoa.models.base import Base
 from NhaKhoa.models.role import RoleEnum
@@ -25,7 +25,8 @@ class User(Base):
 
     email = Column(String(100), nullable=False)
     password = Column(String(255), nullable=False)
-    role = Column(Enum(RoleEnum), nullable=False, default=RoleEnum.USER)
+    role_id = Column(Integer, ForeignKey("roles.id"), default=RoleEnum.USER.value)
 
     doctor = relationship("Doctor", back_populates="user", uselist=False)
     patient = relationship("Patient", back_populates="user", uselist=False)
+    role = relationship('Role', back_populates='users', lazy=True)
