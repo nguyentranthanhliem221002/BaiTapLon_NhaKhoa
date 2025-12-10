@@ -1,0 +1,245 @@
+{% extends "layouts/base.html" %}
+{% block title %}Lịch hẹn của tôi{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="text-center mb-4 text-success">Lịch hẹn của tôi</h2>
+
+    <div id="calendar"></div>
+
+    <!-- Modal chi tiết cuộc hẹn -->
+    <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header bg-success text-white">
+            <h5 class="modal-title" id="eventModalLabel">Chi tiết cuộc hẹn</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+          </div>
+          <div class="modal-body">
+            <p><strong>Bác sĩ:</strong> <span id="modalTitle"></span></p>
+            <p><strong>Ngày & giờ:</strong> <span id="modalDate"></span></p>
+            <p><strong>Mô tả:</strong> <span id="modalDescription"></span></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal đặt lịch -->
+    <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-success text-white">
+            <h5 class="modal-title" id="createModalLabel">Đặt lịch hẹn</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+          </div>
+          <div class="modal-body">
+            <form id="appointmentForm">
+             <div class="mb-3">
+                <label for="doctor" class="form-label">Bác sĩ</label>
+                <select class="form-control border-success" id="doctor" required>
+                    <option value="">-- Chọn bác sĩ --</option>
+                    {% for doctor in doctors %}
+                        <option value="{{ doctor.id }}">{{ doctor.name }} - {{ doctor.specialty_id }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+              <div class="mb-3">
+                <label for="description" class="form-label">Mô tả</label>
+                <textarea class="form-control border-success" id="description"></textarea>
+              </div>
+              <input type="hidden" id="appointmentDate">
+              <button type="submit" class="btn btn-success">Đặt lịch</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
+
+<style>
+#calendar {
+    max-width: 900px;
+    margin: 0 auto;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    border-radius: 12px;
+    padding: 15px;
+    background-color: #f8fff5; /* xanh lá nhạt */
+}
+.fc .fc-toolbar-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #28a745; /* xanh lá */
+}
+.fc .fc-button {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: #fff;
+}
+.fc .fc-button:hover, .fc .fc-button:focus {
+    background-color: #218838;
+    border-color: #1e7e34;
+    color: #fff;
+}
+.fc .fc-daygrid-event {
+    background-color: #28a745;
+    border: none;
+    color: #fff;
+    border-radius: 5px;
+}
+.custom-context-menu {
+    position: absolute;
+    z-index: 10000;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.custom-context-menu button {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    text-align: left;
+    color: #28a745;
+    font-weight: 500;
+}
+.custom-context-menu button:hover {
+    background-color: #e6f4ea;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        height: 'auto',
+        themeSystem: 'bootstrap5',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        navLinks: true,
+        selectable: true,
+        selectMirror: true,
+        events: function(fetchInfo, successCallback, failureCallback) {
+            fetch(`/api/events?start=${fetchInfo.startStr}&end=${fetchInfo.endStr}`)
+            .then(res => res.json())
+            .then(data => successCallback(data))
+            .catch(err => failureCallback(err));
+        },
+        eventClick: function(info) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' };
+            const dateStr = info.event.start.toLocaleString('vi-VN', options);
+
+            document.getElementById('modalTitle').innerText = info.event.title;
+            document.getElementById('modalDate').innerText = dateStr;
+            document.getElementById('modalDescription').innerText = info.event.extendedProps.description || "Không có mô tả";
+
+            new bootstrap.Modal(document.getElementById('eventModal')).show();
+        },
+        dayMaxEvents: true,
+        eventDidMount: function(info) {
+            new bootstrap.Tooltip(info.el, {
+                title: info.event.extendedProps.description || "Không có mô tả",
+                placement: "top",
+                trigger: "hover",
+                container: "body"
+            });
+        },
+        dayCellDidMount: function(info) {
+            info.el.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                removeContextMenu();
+                const events = calendar.getEvents().filter(ev => ev.start.toDateString() === info.date.toDateString());
+                if(events.length > 0){
+                    showContextMenu(e.pageX, e.pageY, 'delete', events[0]);
+                } else {
+                    showContextMenu(e.pageX, e.pageY, 'create', info.date);
+                }
+            });
+        }
+    });
+
+    calendar.render();
+
+    function showContextMenu(x, y, type, data){
+        const menu = document.createElement('div');
+        menu.className = 'custom-context-menu';
+        if(type === 'create'){
+            menu.innerHTML = `<button id="createAppointment">Đặt lịch hẹn</button>`;
+            document.body.appendChild(menu);
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+            document.getElementById('createAppointment').addEventListener('click', function(){
+                document.getElementById('appointmentDate').value = data.toISOString();
+                new bootstrap.Modal(document.getElementById('createModal')).show();
+                removeContextMenu();
+            });
+        } else if(type === 'delete'){
+            menu.innerHTML = `<button id="deleteAppointment" class="text-danger">Hủy lịch hẹn</button>`;
+            document.body.appendChild(menu);
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+            document.getElementById('deleteAppointment').addEventListener('click', function(){
+                if(confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')){
+                    data.remove();
+                }
+                removeContextMenu();
+            });
+        }
+        document.addEventListener('click', removeContextMenu);
+    }
+
+    function removeContextMenu(){
+        document.querySelectorAll('.custom-context-menu').forEach(menu => menu.remove());
+        document.removeEventListener('click', removeContextMenu);
+    }
+
+    document.getElementById('appointmentForm').addEventListener('submit', function(e){
+        e.preventDefault();
+        const doctorId = document.getElementById('doctor').value;
+        const description = document.getElementById('description').value;
+        const date = document.getElementById('appointmentDate').value;
+
+        fetch("/appointment/add_ajax", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                doctor_id: doctorId,
+                appointment_date: date,
+                description: description
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success){
+                calendar.addEvent({
+                    id: data.id,
+                    title: data.doctor_name,
+                    start: date,
+                    description: description
+                });
+                bootstrap.Modal.getInstance(document.getElementById('createModal')).hide();
+                this.reset();
+            } else {
+                alert("Đặt lịch thất bại!");
+            }
+        });
+    });
+
+});
+</script>
+{% endblock %}
