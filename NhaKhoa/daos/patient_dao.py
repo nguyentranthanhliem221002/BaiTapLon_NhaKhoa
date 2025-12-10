@@ -26,6 +26,11 @@ class PatientDAO:
             session.add(user)
             session.commit()
 
+            # Gán user_id cho Patient
+            patient.user_id = user.role_id
+            session.add(patient)
+            session.commit()
+
     def update(self, patient: Patient):
         with get_session() as session:
             session.merge(patient)
@@ -52,3 +57,6 @@ class PatientDAO:
             elif filter_by == "phone":
                 query = query.filter(Patient.phone.ilike(f"%{keyword}%"))
             return query.all()
+    def get_by_user_id(self, user_id: int):
+        with get_session() as session:
+            return session.query(Patient).filter(Patient.user_id == user_id).first()
