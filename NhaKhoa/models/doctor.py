@@ -28,7 +28,7 @@ class Doctor(Base):
     user_id = Column(Integer, ForeignKey('users.id'), default=1)
     role_id = Column(Integer, ForeignKey("roles.id"), default=RoleEnum.DOCTOR.value) #2. doctor
 
-    appointments = relationship("Appointment", back_populates="doctor", lazy=True)
+    schedules = relationship("Schedule", back_populates="doctor")
     user = relationship('User', back_populates='doctor', uselist=False)
     role = relationship('Role', back_populates='doctors', lazy=True)
     specialty = relationship('Specialty', back_populates='doctors', lazy=True)

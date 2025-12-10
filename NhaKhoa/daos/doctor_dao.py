@@ -44,6 +44,7 @@
 #             session.commit()
 
 from NhaKhoa.models.doctor import Doctor
+from NhaKhoa.models.role import RoleEnum
 from NhaKhoa.models.user import User
 from NhaKhoa.database.db import get_session
 import bcrypt
@@ -69,7 +70,7 @@ class DoctorDAO:
             raw_password = "1"  # password mặc định
             hashed_password = bcrypt.hashpw(raw_password.encode(), bcrypt.gensalt()).decode()
 
-            user = User(username=username, password=hashed_password, email="", role="doctor")
+            user = User(username=username, password=hashed_password, email="", role_id=RoleEnum.DOCTOR.value)
             session.add(user)
             session.commit()
 

@@ -1,4 +1,6 @@
 # NhaKhoa/database/db.py
+from datetime import datetime, timedelta
+
 from sqlalchemy import create_engine, text, select, func
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from contextlib import contextmanager
@@ -8,6 +10,7 @@ import bcrypt
 from NhaKhoa import DB_USER, DB_PASSWORD, DB_HOST, DB_NAME, DB_CHARSET, SQLALCHEMY_DATABASE_URI, data
 from NhaKhoa.models.base import Base
 from NhaKhoa.models.role import RoleEnum, Role
+from NhaKhoa.models.schedule import Schedule
 from NhaKhoa.models.specialty import Specialty
 
 # ==============================
@@ -91,8 +94,8 @@ def init_database():
         if db.scalar(select(func.count()).select_from(Doctor)) == 0:
             doctor_user = db.scalar(select(User).where(User.role_id == RoleEnum.DOCTOR.value))
             db.add_all([
-                Doctor(name="Dr. Nam", specialty_id=1, phone="0901123456"),
-                Doctor(name="Dr. Hoa", specialty_id=2, phone="0902876543")
+                Doctor(name="Nguyen Van Nam", specialty_id=1, phone="0901123456"),
+                Doctor(name="Nguyen Van Hoa", specialty_id=2, phone="0902876543")
             ])
             db.commit()
 
@@ -135,6 +138,40 @@ def init_database():
                 Medicine(name="Paracetamol", medicine_type_id=1, price=2000),
                 Medicine(name="Amoxicillin", medicine_type_id=2, price=5000)
             ])
+            db.commit()
+
+        # --- Schedules ---
+        if db.scalar(select(func.count()).select_from(Schedule)) == 0:
+            # Get doctors
+            dr_nam = db.scalar(select(Doctor).where(Doctor.name == "Nguyen Van Nam"))
+            dr_hoa = db.scalar(select(Doctor).where(Doctor.name == "Nguyen Van Hoa"))
+
+            # Define a function to create schedules for a doctor
+            def create_schedules_for_doctor(doctor, start_hour=9, end_hour=17):
+                schedules = []
+                now = datetime.now()
+                for day in range(7):  # Create schedules for the next 7 days
+                    date = now + timedelta(days=day)
+                    for hour in range(start_hour, end_hour):
+                        from_date = datetime(date.year, date.month, date.day, hour, 0)
+                        to_date = datetime(date.year, date.month, date.day, hour + 1, 0)
+                        if from_date.hour == 12:
+                            continue
+                        else:
+                            schedules.append(Schedule(
+                                name=f'Lịch hẹn với bác sĩ {doctor.name}',
+                                doctor_id=doctor.id,
+                                from_date=from_date,
+                                to_date=to_date
+                            ))
+                return schedules
+
+            # Create schedules for Dr. Nam and Dr. Hoa
+            schedules = []
+            schedules.extend(create_schedules_for_doctor(dr_nam))
+            schedules.extend(create_schedules_for_doctor(dr_hoa))
+
+            db.add_all(schedules)
             db.commit()
 
     print(">>> ✓ Database & Tables ready with seed data!")

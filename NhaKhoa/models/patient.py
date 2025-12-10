@@ -23,8 +23,8 @@ from NhaKhoa.models.role import RoleEnum
 class Patient(Base):
     __tablename__ = "patients"
     __table_args__ = {"extend_existing": True}
-    age = Column(Integer, nullable=False)
-    phone = Column(String(20), nullable=False)
+    age = Column(Integer, default=999)
+    phone = Column(String(20), default="")
     address = Column(String(255))
     user_id = Column(Integer, ForeignKey('users.id'), default=2) # theo db.py
     role_id = Column(Integer, ForeignKey("roles.id"), default=RoleEnum.PATIENT.value)
