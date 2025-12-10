@@ -1,4 +1,5 @@
 from NhaKhoa.models.patient import Patient
+from NhaKhoa.models.role import RoleEnum
 from NhaKhoa.models.user import User
 from NhaKhoa.database.db import get_session
 import bcrypt
@@ -12,30 +13,21 @@ class PatientDAO:
         with get_session() as session:
             return session.get(Patient, id)
 
-    # def add(self, patient: Patient):
-    #     with get_session() as session:
-    #         session.add(patient)
-    #         session.commit()
-    #
-    #         username = patient.phone
-    #         raw_password = "1"
-    #         hashed_password = bcrypt.hashpw(raw_password.encode(), bcrypt.gensalt()).decode()
-    #
-    #         user = User(username=username, password=hashed_password, email="", role="patient")
-    #         session.add(user)
-    #         session.commit()
     def add(self, patient: Patient):
         with get_session() as session:
-            # Tạo User trước
+            session.add(patient)
+            session.commit()
+
             username = patient.phone
             raw_password = "1"
             hashed_password = bcrypt.hashpw(raw_password.encode(), bcrypt.gensalt()).decode()
-            user = User(username=username, password=hashed_password, email="", role="patient")
+
+            user = User(username=username, password=hashed_password, email="", role_id=RoleEnum.PATIENT.value)
             session.add(user)
             session.commit()
 
             # Gán user_id cho Patient
-            patient.user_id = user.id
+            patient.user_id = user.role_id
             session.add(patient)
             session.commit()
 

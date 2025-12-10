@@ -6,28 +6,52 @@
 <div class="container mt-4" style="max-width: 600px;">
     <h2 class="mb-4">Thêm lịch hẹn mới</h2>
 
-    <form method="POST" action="{{ url_for('add_appointment') }}">
+    <form method="GET" action="{{ url_for('add_appointment') }}">
         <!-- Chọn bệnh nhân -->
         <div class="mb-3">
             <label for="patient_id" class="form-label">Bệnh nhân</label>
             <select class="form-select" id="patient_id" name="patient_id" required>
-                <option value="" disabled selected>Chọn bệnh nhân</option>
+                <option value="" disabled {% if not selected_patient %}selected{% endif %}>Chọn bệnh nhân</option>
                 {% for patient in patients %}
-                <option value="{{ patient.id }}">{{ patient.name }}</option>
+                <option value="{{ patient.id }}"{% if patient.id == selected_patient %}selected{% endif %}>{{ patient.name }}</option>
                 {% endfor %}
             </select>
         </div>
 
+<!--        &lt;!&ndash; Chọn khám bệnh &ndash;&gt;-->
+<!--        <div class="mb-3">-->
+<!--            <label for="specialty_id" class="form-label">Dịch vụ</label>-->
+<!--            <select class="form-select" id="specialty_id" name="specialty_id" required>-->
+<!--                <option value="" disabled selected>Chọn dịch vụ</option>-->
+<!--                {% for specialty in specialties %}-->
+<!--                <option value="{{ specialty.id }}">{{ specialty.name }}</option>-->
+<!--                {% endfor %}-->
+<!--            </select>-->
+<!--        </div>-->
+        <div class="mb-3">
+            <label for="specialty_id" class="form-label">Dịch vụ</label>
+            <select class="form-select" id="specialty_id" name="specialty_id" required onchange="this.form.submit()">
+                <option value="" disabled {% if not selected_specialty %}selected{% endif %}>Chọn dịch vụ</option>
+                {% for specialty in specialties %}
+                <option value="{{ specialty.id }}" {% if specialty.id == selected_specialty %}selected{% endif %}>{{ specialty.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+
+    <form method="POST" action="{{ url_for('add_appointment') }}">
+        {% if doctors %}
         <!-- Chọn bác sĩ -->
         <div class="mb-3">
             <label for="doctor_id" class="form-label">Bác sĩ</label>
             <select class="form-select" id="doctor_id" name="doctor_id" required>
                 <option value="" disabled selected>Chọn bác sĩ</option>
                 {% for doctor in doctors %}
-                <option value="{{ doctor.id }}">{{ doctor.name }} ({{ doctor.specialty }})</option>
+                <option value="{{ doctor.id }}">{{ doctor.name }}</option>
                 {% endfor %}
             </select>
         </div>
+        {% endif %}
 
         <!-- Ngày giờ hẹn -->
         <div class="mb-3">
@@ -48,3 +72,16 @@
     </form>
 </div>
 {% endblock %}
+<script>
+    function toggleDoctorDropdown() {
+        const specialtySelect = document.getElementById("specialty_id");
+        const doctorContainer = document.getElementById("doctor_container");
+
+        // Show the doctor dropdown if a specialty is selected
+        if (specialtySelect.value) {
+            doctorContainer.style.display = "block";
+        } else {
+            doctorContainer.style.display = "none";
+        }
+    }
+</script>

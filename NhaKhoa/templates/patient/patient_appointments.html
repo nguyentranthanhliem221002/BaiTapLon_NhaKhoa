@@ -42,7 +42,7 @@
                 <select class="form-control border-success" id="doctor" required>
                     <option value="">-- Chọn bác sĩ --</option>
                     {% for doctor in doctors %}
-                        <option value="{{ doctor.id }}">{{ doctor.name }} - {{ doctor.specialty }}</option>
+                        <option value="{{ doctor.id }}">{{ doctor.name }} - {{ doctor.specialty_id }}</option>
                     {% endfor %}
                 </select>
             </div>
