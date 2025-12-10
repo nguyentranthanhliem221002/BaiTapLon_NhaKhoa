@@ -4,7 +4,7 @@
 
 {% block content %}
 <h2>Dịch vụ</h2>
-<a href="{{ url_for('add_service_route') }}" class="btn btn-success mb-3">+ Thêm dịch vụ</a>
+<a href="{{ url_for('add_service') }}" class="btn btn-success mb-3">+ Thêm dịch vụ</a>
 
 <form method="GET" action="{{ url_for('services') }}" class="mb-3 row g-2">
     <div class="col-auto">
@@ -34,10 +34,11 @@
             <td>{{ s.name }}</td>
             <td>{{ s.type_name }}</td>
             <td>{{ s.price }}</td>
-            <td>
-                <a href="{{ url_for('edit_service', id=s.id) }}" class="btn btn-primary btn-sm">Sửa</a>
-                <a href="{{ url_for('edit_service', id=s.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Xóa dịch vụ?')">Xóa</a>
-            </td>
+        <td>
+            <a href="{{ url_for('edit_service', id=s.id) }}" class="btn btn-primary btn-sm">Sửa</a>
+            <a href="{{ url_for('delete_service', id=s.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Xóa dịch vụ?')">Xóa</a>
+        </td>
+
         </tr>
         {% endfor %}
     </tbody>

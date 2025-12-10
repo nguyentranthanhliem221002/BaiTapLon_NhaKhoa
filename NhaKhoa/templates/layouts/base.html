@@ -23,7 +23,7 @@
 <nav class="d-flex align-items-center flex-grow-1 justify-content-center">
     <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('dashboard') }}">Trang chủ</a>
 
-    {% if session['role'] == 'admin' %}
+    {% if session['role'] == 4 %}
         <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('patients') }}">Bệnh nhân</a>
         <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('doctors') }}">Bác sĩ</a>
         <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn</a>
@@ -33,11 +33,11 @@
         <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>
 
 
-    {% elif session['role'] == 'doctor' %}
+    {% elif session['role'] == 3 %}
         <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn</a>
         <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('patients') }}">Bệnh nhân</a>
         <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>
-    {% elif session['role'] == 'patient' %}
+    {% elif session['role'] == 2 %}
         <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn của tôi</a>
         <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('doctors') }}">Bác sĩ</a>
         <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn của tôi</a>
@@ -59,7 +59,19 @@
         </div>
     </div>
 </header>
-
+ <!-- Flash messages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+    </div>
 <main class="container">
     {% block content %}{% endblock %}
 </main>

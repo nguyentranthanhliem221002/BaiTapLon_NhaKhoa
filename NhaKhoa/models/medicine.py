@@ -1,6 +1,12 @@
-class Medicine:
-    def __init__(self, id=None, name="", medicine_type_id=None, price=0):
-        self.id = id
-        self.name = name
-        self.medicine_type_id = medicine_type_id
-        self.price = price
+from sqlalchemy import Column, Integer, String, ForeignKey, Float
+from NhaKhoa.models.base import Base
+from NhaKhoa.models import medicineType
+from sqlalchemy.orm import relationship
+
+class Medicine(Base):
+    __tablename__ = "medicines"
+    __table_args__ = {"extend_existing": True}
+    medicine_type_id = Column(Integer, ForeignKey('medicine_types.id'))
+    price = Column(Float, default=0)
+
+    medicine_type = relationship('MedicineType', back_populates='medicines', lazy=True)

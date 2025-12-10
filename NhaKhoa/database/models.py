@@ -1,76 +1,90 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, DECIMAL, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, DECIMAL, DateTime, Text
 from sqlalchemy.orm import relationship
-from NhaKhoa import db, app
+from NhaKhoa import Base
 from datetime import datetime
 
 
-class Abstract(db.Model):
-    __abstract__ = True
+class User(Base):
+    __tablename__ = "users"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    active = Column(Boolean, default=True)
-    created_date = Column(DateTime, default=datetime.now)
-
-class User(db.Model):
-    __tablename__ = 'users'
-
-
-    username = Column(String(100), unique=True, nullable=False)
-    password = Column(String(255), nullable=False)
-    email = Column(String(255), unique=True, nullable=False)
-    address = Column(String(255), nullable=True)
-    image = Column(String(255), nullable=True)
-    day_of_birth = Column(DateTime, nullable=False)
-    full_name = Column(String(255), nullable=False)
+    username = Column(String(100), unique=True)
+    password = Column(String(255))
+    role = Column(String(20), default="patient")
+    email = Column(String(255), unique=True)
+    reset_token = Column(String(255), nullable=True)
+    reset_token_expiry = Column(DateTime, nullable=True)
 
 
-class Doctor(User):
-    __tablename__ = 'doctors'
-
+class Patient(Base):
+    __tablename__ = "patients"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), nullable=False)
+    name = Column(String(255))
+    age = Column(Integer)
+    phone = Column(String(20))
+    address = Column(String(255))
+    userId = Column(String(255), nullable=True)
+
+
+class Doctor(Base):
+    __tablename__ = "doctors"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255))
     specialty = Column(String(255))
     phone = Column(String(20))
+    userId = Column(String(255), nullable=True)
 
-class Appointment(db.Model):
-    __tablename__ = 'appointments'
 
+class Appointment(Base):
+    __tablename__ = "appointments"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    patient_id = Column(Integer, ForeignKey('patients.id'), nullable=False)
-    doctor_id = Column(Integer, ForeignKey('doctors.id'), nullable=False)
-    appointment_date = Column(DateTime, nullable=False)
-    description = Column(Text)
+    patient_id = Column(Integer, ForeignKey("patients.id"))
+    doctor_id = Column(Integer, ForeignKey("doctors.id"))
+    appointment_date = Column(DateTime)
+    description = Column(Text, default="")
 
-    patient = relationship("Patient", backref="appointments")
-    doctor = relationship("Doctor", backref="appointments")
+    patient = relationship("Patient")
+    doctor = relationship("Doctor")
 
-class ServiceType(db.Model):
-    __tablename__ = 'service_types'
 
+class Bill(Base):
+    __tablename__ = "bills"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), nullable=False)
+    appointment_id = Column(Integer, ForeignKey("appointments.id"))
+    amount = Column(DECIMAL(10, 2))
+    status = Column(String(50), default="Chưa thanh toán")
+    payment_method = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
 
-class Service(db.Model):
-    __tablename__ = 'services'
+    appointment = relationship("Appointment")
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), nullable=False)
-    service_type_id = Column(Integer, ForeignKey('service_types.id'), nullable=False)
-    price = Column(DECIMAL(10, 2), nullable=False)
 
-    service_type = relationship("ServiceType", backref="services")
-
-class MedicineType(db.Model):
-    __tablename__ = 'medicine_types'
-
+class ServiceType(Base):
+    __tablename__ = "service_types"
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), nullable=False)
 
-class Medicine(db.Model):
-    __tablename__ = 'medicines'
 
+class Service(Base):
+    __tablename__ = "services"
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), nullable=False)
-    medicine_type_id = Column(Integer, ForeignKey('medicine_types.id'), nullable=False)
-    price = Column(DECIMAL(10, 2), nullable=False)
+    service_type_id = Column(Integer, ForeignKey("service_types.id"))
+    price = Column(DECIMAL(10, 2))
 
-    medicine_type = relationship("MedicineType", backref="medicines")
+    service_type = relationship("ServiceType")
+
+
+class MedicineType(Base):
+    __tablename__ = "medicine_types"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+
+
+class Medicine(Base):
+    __tablename__ = "medicines"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    medicine_type_id = Column(Integer, ForeignKey("medicine_types.id"))
+    price = Column(DECIMAL(10, 2))
+
+    medicine_type = relationship("MedicineType")
