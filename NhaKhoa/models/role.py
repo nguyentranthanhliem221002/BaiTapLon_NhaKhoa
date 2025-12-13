@@ -8,8 +8,8 @@ from NhaKhoa.models.base import Base
 
 class RoleEnum(Enum):
     USER = 1
-    DOCTOR = 3
     PATIENT = 2
+    DOCTOR = 3
     ADMIN = 4
 
 
