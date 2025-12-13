@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.orm import joinedload
 
 from NhaKhoa.database.db import get_session
@@ -36,3 +38,34 @@ class ScheduleDAO:
                 .filter(Schedule.doctor_id == doctor_id, Schedule.num_patient < Schedule.max_patient) \
                 .options(joinedload(Schedule.doctor)) \
                 .all()
+
+    def get_all_available_schedules(self, doctor_id: int):
+        with get_session() as session:
+            today = datetime.now().date()
+            return session.query(Schedule) \
+                .filter(
+                Schedule.doctor_id == doctor_id,
+                Schedule.from_date >= today,
+                Schedule.num_patient < Schedule.max_patient
+            ) \
+                .options(joinedload(Schedule.doctor)) \
+                .order_by(Schedule.from_date) \
+                .all()
+
+    def get_available_schedules_by_time(self, available_schedules: list, selected_datetime: datetime):
+        """
+        Filters a list of available schedules by selected datetime (±1 hour).
+        Returns filtered schedules (empty list if out of working hours).
+        """
+        # Skip if out of working hours (10:00-17:00)
+        if not (9 <= selected_datetime.hour < 16):
+            return []
+
+        # Filter by time range: same date, same hour or next hour
+        selected_date = selected_datetime.date()
+        selected_hour = selected_datetime.hour
+        return [
+            s for s in available_schedules
+            if s.from_date.date() == selected_date and
+               (s.from_date.hour == selected_hour or s.from_date.hour == selected_hour + 1)
+        ]
