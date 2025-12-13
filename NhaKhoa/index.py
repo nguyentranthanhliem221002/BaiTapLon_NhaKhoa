@@ -1,4 +1,6 @@
 # index.py
+from urllib.parse import unquote
+
 from flask import Flask, render_template, redirect, request, session, url_for, flash
 from functools import wraps
 import bcrypt
@@ -516,46 +518,70 @@ def add_appointment():
     patients = patient_dao.get_all()
     specialties = specialty_dao.get_all()
     available_schedules = []
+    datetime_obj_str = ""
+    schedule_id = None
+    specialty_name = ""
+    doctor_name = ""
 
     specialty_id = request.args.get('specialty_id', type=int)
     patient_id = request.args.get('patient_id', type=int)
-    appt_date = request.form.get('appointment_date')
+    doctor_id = request.args.get("doctor_id", type=int)
+    appt_date = request.args.get('appointment_date', type=str)
+    data = request.form
+
 
     doctors = []
     if specialty_id:
         doctors = doctor_dao.get_doctors_by_specialty(specialty_id)
+        specialty_name = specialty_dao.get_name_by_id(specialty_id)
 
-    if appt_date is not None:
+    if appt_date:
+        appt_date = unquote(appt_date)
         format = '%Y-%m-%dT%H:%M'
         datetime_obj = datetime.strptime(appt_date, format)
-
-        data = request.form
-        doctor_id = int(data["doctor_id"])
+        datetime_obj_str = datetime_obj.strftime(format)
 
         if doctor_id:
+            doctor_name = doctor_dao.get_by_id(doctor_id).name
             available_schedules = schedule_dao.get_all_available_schedules(doctor_id)
             available_schedules = schedule_dao.get_available_schedules_by_time(
                 available_schedules,
                 datetime_obj
             )
+            # for s in available_schedules:
+            #     print(s.id)
+            #     pass
             if available_schedules is None:
                 err = "Giờ chọn phải nằm trong khoảng từ 9 đến 16"
+                pass
+
+        schedule_id = data.get("schedule_id")
+        if schedule_id is not None:
+            schedule_id = int(data.get("schedule_id"))
 
     if request.method == "POST":
+        patient_id = data.get("patient_id")
+        schedule_id = data.get("schedule_id")
+        description = data.get("description", "")
+        name = f'Cuộc hẹn {specialty_name} với bác sĩ {doctor_name}'
         new_appointment = Appointment(
+            name=name,
             patient_id=patient_id,
-            appointment_date=data["appointment_date"],
-            description=data.get("description", "")
+            schedule_id=schedule_id,
+            description=description
         )
-        # appointment_dao.add(new_appointment)
-        # return redirect(url_for("appointments"))
+        # print(f'Appointment {new_appointment.patient_id} - {new_appointment.schedule_id} - {new_appointment.description}')
+        appointment_dao.add(new_appointment)
+        return redirect(url_for("appointments"))
     return render_template("appointment/appointment_add.html",
                            patients=patients,
                            doctors=doctors,
                            specialties=specialties,
+                           selected_doctor=doctor_id,
                            selected_specialty=specialty_id,
                            selected_patient=patient_id,
                            available_schedules=available_schedules,
+                           fm_datetime=datetime_obj_str,
                            err=err)
 
 @app.route("/appointment/edit/<int:id>", methods=["GET","POST"])
