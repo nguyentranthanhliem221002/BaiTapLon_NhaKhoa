@@ -182,7 +182,15 @@
                 <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>
 
             {% elif session['role'] == RoleEnum.PATIENT.value %}
-                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('my_appointments') }}">Lịch hẹn của tôi</a>
+                <div class="dropdown me-3">
+                    <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        Lịch hẹn
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('my_appointments') }}">Lịch hẹn của tôi</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('add_appointment') }}">Đặt lịch hẹn</a></li>
+                    </ul>
+                </div>
                 <div class="dropdown me-3">
                     <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                         Bác sĩ
