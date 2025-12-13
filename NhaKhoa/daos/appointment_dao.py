@@ -29,17 +29,42 @@ class AppointmentDAO:
         with get_session() as session:
             session.merge(appointment)
             session.commit()
+
     def get_by_patient_id(self, patient_id: int):
         with get_session() as session:
             return session.query(Appointment) \
-                .options(joinedload(Appointment.patient), joinedload(Appointment.schedule)) \
-                .filter(Appointment.patient_id == patient_id).all()
+                .options(
+                joinedload(Appointment.patient),
+                joinedload(Appointment.schedule),
+                joinedload(Appointment.doctor)
+            ) \
+                .filter(Appointment.patient_id == patient_id, Appointment.active == 1) \
+                .all()
+
+    def get_by_doctor_and_date(self, doctor_id: int, appointment_date: datetime):
+        with get_session() as session:
+            return session.query(Appointment) \
+                .filter(
+                Appointment.doctor_id == doctor_id,
+                Appointment.appointment_date == appointment_date,
+                Appointment.active == 1
+            ).first()
+
     def delete(self, id: int):
         with get_session() as session:
             appt = session.get(Appointment, id)
             if appt:
                 session.delete(appt)
                 session.commit()
+
+    def cancel(self, id: int):
+        with get_session() as session:
+            appt = session.get(Appointment, id)
+            if appt:
+                appt.active = 0
+                session.commit()
+                return True
+            return False
 
     def search(self, filter_by: str, keyword: str):
         with get_session() as session:

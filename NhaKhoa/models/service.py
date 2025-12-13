@@ -15,3 +15,4 @@ class Service(Base):
     price = Column(Float, nullable=False)
 
     service_type = relationship('ServiceType', back_populates='services', lazy=True)
+    appointments = relationship("Appointment", back_populates="service")

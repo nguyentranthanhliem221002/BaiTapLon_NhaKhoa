@@ -1,5 +1,5 @@
 # index.py
-from flask import Flask, render_template, redirect, request, session, url_for, flash
+from flask import Flask, render_template, redirect, request, session, url_for, flash, jsonify
 from functools import wraps
 import bcrypt
 import secrets
@@ -304,32 +304,200 @@ def patient_doctors():
 
     return render_template("patient/patient_doctors.html", doctors=doctors)
 
+# @app.route('/appointments/create', methods=['POST'])
+# def create_appointment():
+#     data = request.get_json()
+#
+#     username = session.get("user")
+#     if not username:
+#         return jsonify({"success": False, "message": "User chưa đăng nhập!"})
+#
+#     user = user_dao.get_by_username(username)
+#     if not user:
+#         return jsonify({"success": False, "message": "User không tồn tại!"})
+#
+#     patient = patient_dao.get_by_user_id(user.id)
+#     if not patient:
+#         return jsonify({"success": False, "message": "Bệnh nhân chưa tồn tại!"})
+#
+#     try:
+#         appointment_date = datetime.fromisoformat(data.get("appointment_date"))
+#     except:
+#         return jsonify({"success": False, "message": "Ngày giờ không hợp lệ!"})
+#
+#     new_appointment = Appointment(
+#         patient_id=patient.id,
+#         service_id=data.get('service_id'),
+#         doctor_id=int(data.get('doctor_id')),
+#         schedule_id=int(data.get('schedule_id')),
+#         appointment_date=appointment_date,
+#         description=data.get('description', ""),
+#         name=data.get('name', f"Appointment-{patient.id}-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+#     )
+#
+#     try:
+#         appointment_dao.add(new_appointment)
+#         doctor = doctor_dao.get_by_id(new_appointment.doctor_id)
+#
+#         return jsonify({
+#             "success": True,
+#             "message": "Đặt lịch thành công",
+#             "event": {
+#                 "id": new_appointment.id,
+#                 "title": doctor.name if doctor else "Bác sĩ chưa xác định",
+#                 "start": new_appointment.appointment_date.isoformat(),
+#                 "description": new_appointment.description
+#             }
+#         })
+#     except Exception as e:
+#         return jsonify({"success": False, "message": str(e)})
+#
+
+
+@app.route('/appointments/create', methods=['POST'])
+def create_appointment():
+    data = request.get_json()
+
+    username = session.get("user")
+    if not username:
+        return jsonify({"success": False, "message": "User chưa đăng nhập!"})
+
+    user = user_dao.get_by_username(username)
+    if not user:
+        return jsonify({"success": False, "message": "User không tồn tại!"})
+
+    patient = patient_dao.get_by_user_id(user.id)
+    if not patient:
+        return jsonify({"success": False, "message": "Bệnh nhân chưa tồn tại!"})
+
+    try:
+        appointment_date = datetime.fromisoformat(data.get("appointment_date"))
+    except:
+        return jsonify({"success": False, "message": "Ngày giờ không hợp lệ!"})
+
+    # ==== Check trùng lịch ====
+    existing = appointment_dao.get_by_doctor_and_date(
+        doctor_id=int(data.get('doctor_id')),
+        appointment_date=appointment_date
+    )
+    if existing:
+        return jsonify({"success": False, "message": "Lịch hẹn trùng! Vui lòng chọn thời gian khác."})
+    # =========================
+
+    new_appointment = Appointment(
+        patient_id=patient.id,
+        service_id=data.get('service_id'),
+        doctor_id=int(data.get('doctor_id')),
+        schedule_id=int(data.get('schedule_id')),
+        appointment_date=appointment_date,
+        description=data.get('description', ""),
+        name=data.get('name', f"Appointment-{patient.id}-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+    )
+
+    try:
+        appointment_dao.add(new_appointment)
+        doctor = doctor_dao.get_by_id(new_appointment.doctor_id)
+
+        return jsonify({
+            "success": True,
+            "message": "Đặt lịch thành công",
+            "event": {
+                "id": new_appointment.id,
+                "title": doctor.name if doctor else "Bác sĩ chưa xác định",
+                "start": new_appointment.appointment_date.strftime("%Y-%m-%dT%H:%M")
+                ,
+                "description": new_appointment.description
+            }
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+
+@app.route("/appointments/cancel/<int:id>", methods=["POST"])
+@login_required(role=RoleEnum.PATIENT.value)
+def cancel_appointment(id):
+    user = user_dao.get_by_username(session["user"])
+    patient = patient_dao.get_by_user_id(user.id)
+    appointment = appointment_dao.get_by_id(id)
+
+    if not appointment or appointment.patient_id != patient.id:
+        return jsonify({"success": False, "message": "Không tìm thấy lịch hẹn hoặc không có quyền!"})
+
+    # Cập nhật trạng thái cancel
+    appointment.active = 0
+    appointment_dao.update(appointment)
+
+    return jsonify({"success": True, "message": "Hủy lịch hẹn thành công!"})
+
+@app.route("/appointments/events")
+@login_required(role=RoleEnum.PATIENT.value)
+def appointments_events():
+    user = user_dao.get_by_username(session["user"])
+    patient = patient_dao.get_by_user_id(user.id)
+    if not patient:
+        return jsonify([])
+
+    appointments = appointment_dao.get_by_patient_id(patient.id)
+    events = []
+    for appt in appointments:
+        events.append({
+            "id": appt.id,
+            "title": appt.doctor.name if appt.doctor else "Bác sĩ chưa xác định",
+            "start": appt.appointment_date.strftime("%Y-%m-%dT%H:%M"),
+            "extendedProps": {
+                "id": appt.id,
+                "description": appt.description
+            }
+        })
+
+    return jsonify(events)
+
 @app.route("/my_appointments")
 @login_required(role=RoleEnum.PATIENT.value)
 def my_appointments():
     user = user_dao.get_by_username(session["user"])
-
     patient = patient_dao.get_by_user_id(user.id)
     if not patient:
         flash("Bệnh nhân không tồn tại!")
         return redirect(url_for("dashboard"))
 
+    # Lấy appointment của patient
     appointments = appointment_dao.get_by_patient_id(patient.id)
-    doctors = doctor_dao.get_all()  # thêm danh sách bác sĩ
+
+    doctors = doctor_dao.get_all()
+    services = service_dao.get_all_services()
+
+    # Lấy tham số format từ query string
+    response_format = request.args.get("format", "html").lower()
 
     events = []
     for appt in appointments:
         events.append({
             "id": appt.id,
-            "title": f"{appt.doctor.name}",
-            "start": appt.appointment_date.strftime("%Y-%m-%d"),
-            "description": appt.description
+            "title": appt.doctor.name if appt.doctor else "Bác sĩ chưa xác định",
+            "start": appt.appointment_date.strftime("%Y-%m-%dT%H:%M"),
+            "extendedProps": {
+                "id": appt.id,
+                "description": appt.description
+            }
         })
 
-    return render_template("patient/patient_appointments.html", events=events, doctors=doctors)
+    if response_format == "json":
+        return jsonify(events)
+    else:
+        return render_template(
+            "patient/patient_appointments.html",
+            events=events,
+            doctors=doctors,
+            services=services
+        )
 
 
-
+@app.route("/doctors/by-service/<int:service_id>")
+def doctors_by_service(service_id):
+    doctors = doctor_dao.get_doctors_by_specialty(service_id)  # hoặc service_id nếu mapping đúng
+    result = [{"id": d.id, "name": d.name} for d in doctors]
+    return jsonify(result)
 @app.route("/appointment/add_ajax", methods=["POST"])
 @login_required(role=RoleEnum.PATIENT.value)
 def add_appointment_ajax():

@@ -47,6 +47,8 @@ from NhaKhoa.models.doctor import Doctor
 from NhaKhoa.models.role import RoleEnum
 from NhaKhoa.models.user import User
 from NhaKhoa.database.db import get_session
+from NhaKhoa.models.service import Service
+
 import bcrypt
 from datetime import datetime
 
