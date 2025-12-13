@@ -109,7 +109,7 @@
 
             <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('dashboard') }}">Trang chủ</a>
 
-            {% if session['role'] == 'admin' %}
+            {% if session['role'] == RoleEnum.ADMIN.value %}
                 <!-- Bệnh nhân -->
                 <div class="dropdown me-3">
                     <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
@@ -167,7 +167,7 @@
 
                 <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>
 
-            {% elif session['role'] == 'doctor' %}
+            {% elif session['role'] == RoleEnum.DOCTOR.value %}
                 <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn</a>
 
                 <div class="dropdown me-3">
@@ -181,7 +181,7 @@
 
                 <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>
 
-            {% elif session['role'] == 'patient' %}
+            {% elif session['role'] == RoleEnum.PATIENT.value %}
                 <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('my_appointments') }}">Lịch hẹn của tôi</a>
                 <div class="dropdown me-3">
                     <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">

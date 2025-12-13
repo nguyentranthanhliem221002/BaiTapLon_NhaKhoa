@@ -1,17 +1,17 @@
 # NhaKhoa/database/db.py
+from datetime import datetime, timedelta
+
 from sqlalchemy import create_engine, text, select, func
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from contextlib import contextmanager
 import pymysql
 import bcrypt
 
-# ==============================
-# CẤU HÌNH DATABASE
-DB_USER = "root"
-DB_PASSWORD = ""
-DB_HOST = "localhost"
-DB_NAME = "nha_khoa"
-DB_CHARSET = "utf8mb4"
+from NhaKhoa import DB_USER, DB_PASSWORD, DB_HOST, DB_NAME, DB_CHARSET, SQLALCHEMY_DATABASE_URI, data
+from NhaKhoa.models.base import Base
+from NhaKhoa.models.role import RoleEnum, Role
+from NhaKhoa.models.schedule import Schedule
+from NhaKhoa.models.specialty import Specialty
 
 # ==============================
 # TẠO DATABASE NẾU CHƯA CÓ
@@ -25,11 +25,11 @@ with temp_engine.connect() as conn:
 
 # ==============================
 # ENGINE CHÍNH + SESSION
-DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}?charset={DB_CHARSET}"
-engine = create_engine(DATABASE_URL, echo=False, future=True)
+
+engine = create_engine(SQLALCHEMY_DATABASE_URI, echo=False, future=True)
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
-Base = declarative_base()
+
 
 # ==============================
 # IMPORT MODEL
@@ -59,33 +59,52 @@ def init_database():
     Base.metadata.create_all(bind=engine)
 
     with get_session() as db:
-        # --- Users ---
-        if db.scalar(select(func.count()).select_from(User)) == 0:
-            users = [
-                ("admin", "admin@example.com", "admin123", "admin"),
-                ("doctor", "doctor@example.com", "123456", "doctor"),
-                ("patient", "patient@example.com", "123456", "patient")
-            ]
-            for username, email, pwd, role in users:
-                hashed = bcrypt.hashpw(pwd.encode(), bcrypt.gensalt()).decode()
-                db.add(User(username=username, email=email, password=hashed, role=role))
+        # --- Roles ---
+        if db.scalar(select(func.count()).select_from(Role)) == 0:
+            db.add_all([
+                Role(name="user", description="Regular user"),
+                Role(name="patient", description="Patient"),
+                Role(name="doctor", description="Doctor"),
+                Role(name="admin", description="Administrator")
+            ])
             db.commit()
+        # --- Users ---
+        if db.scalar(select(func.count()).select_from(User)) == 0: #this line error
+            users = [
+                ("admin", "admin@example.com", "admin123", RoleEnum.ADMIN.value),
+                ("doctor", "doctor@example.com", "123456", RoleEnum.DOCTOR.value),
+                ("patient", "patient@example.com", "123456", RoleEnum.PATIENT.value)
+            ]
+            for name, email, pwd, role in users:
+                hashed = bcrypt.hashpw(pwd.encode(), bcrypt.gensalt()).decode()
+                db.add(User(name=name, email=email, password=hashed, role_id=role))
+            db.commit()
+
+        # --- Specialties ---
+        if db.scalar(select(func.count()).select_from(Specialty)) == 0:
+            doctor_user = db.scalar(select(User).where(User.role_id == RoleEnum.DOCTOR.value))
+            if doctor_user:
+                db.add_all([
+                    Specialty(name="Khám tổng quát", description="Khám sức khỏe tổng quát"),
+                    Specialty(name="Nha khoa thẩm mỹ", description="Chuyên về thẩm mỹ răng miệng")
+                ])
+                db.commit()
 
         # --- Doctors ---
         if db.scalar(select(func.count()).select_from(Doctor)) == 0:
-            doctor_user = db.scalar(select(User).where(User.role == "doctor"))
+            doctor_user = db.scalar(select(User).where(User.role_id == RoleEnum.DOCTOR.value))
             db.add_all([
-                Doctor(name="Dr. Nam", specialty="Nha chu", phone="0901123456", user_id=doctor_user.id),
-                Doctor(name="Dr. Hoa", specialty="Chỉnh nha", phone="0902876543", user_id=doctor_user.id)
+                Doctor(name="Nguyen Van Nam", specialty_id=1, phone="0901123456"),
+                Doctor(name="Nguyen Van Hoa", specialty_id=2, phone="0902876543")
             ])
             db.commit()
 
         # --- Patients ---
         if db.scalar(select(func.count()).select_from(Patient)) == 0:
-            patient_user = db.scalar(select(User).where(User.role == "patient"))
+            patient_user = db.scalar(select(User).where(User.role_id == RoleEnum.PATIENT.value))
             db.add_all([
-                Patient(name="Nguyen Van A", age=25, phone="0901123456", address="Ha Noi", user_id=patient_user.id),
-                Patient(name="Tran Thi B", age=30, phone="0902987654", address="Da Nang", user_id=patient_user.id)
+                Patient(name="Nguyen Van A", age=25, phone="0901123456", address="Ha Noi"),
+                Patient(name="Tran Thi B", age=30, phone="0902987654", address="Da Nang")
             ])
             db.commit()
 
@@ -121,6 +140,40 @@ def init_database():
             ])
             db.commit()
 
+        # --- Schedules ---
+        if db.scalar(select(func.count()).select_from(Schedule)) == 0:
+            # Get doctors
+            dr_nam = db.scalar(select(Doctor).where(Doctor.name == "Nguyen Van Nam"))
+            dr_hoa = db.scalar(select(Doctor).where(Doctor.name == "Nguyen Van Hoa"))
+
+            # Define a function to create schedules for a doctor
+            def create_schedules_for_doctor(doctor, start_hour=9, end_hour=17):
+                schedules = []
+                now = datetime.now()
+                for day in range(7):  # Create schedules for the next 7 days
+                    date = now + timedelta(days=day)
+                    for hour in range(start_hour, end_hour):
+                        from_date = datetime(date.year, date.month, date.day, hour, 0)
+                        to_date = datetime(date.year, date.month, date.day, hour + 1, 0)
+                        if from_date.hour == 12:
+                            continue
+                        else:
+                            schedules.append(Schedule(
+                                name=f'Lịch hẹn với bác sĩ {doctor.name}',
+                                doctor_id=doctor.id,
+                                from_date=from_date,
+                                to_date=to_date
+                            ))
+                return schedules
+
+            # Create schedules for Dr. Nam and Dr. Hoa
+            schedules = []
+            schedules.extend(create_schedules_for_doctor(dr_nam))
+            schedules.extend(create_schedules_for_doctor(dr_hoa))
+
+            db.add_all(schedules)
+            db.commit()
+
     print(">>> ✓ Database & Tables ready with seed data!")
 
 # ==============================
@@ -133,3 +186,4 @@ def get_connection():
         database=DB_NAME,
         cursorclass=pymysql.cursors.DictCursor
     )
+

@@ -8,7 +8,7 @@ class UserDAO:
     def get_by_username(self, username_or_email: str):
         with get_session() as session:
             return session.query(User).filter(
-                (User.username == username_or_email) | (User.email == username_or_email)
+                (User.name == username_or_email) | (User.email == username_or_email)
             ).first()
 
     def register(self, user: User):

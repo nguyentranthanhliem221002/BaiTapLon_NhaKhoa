@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DECIMAL, DateTime, Text
 from sqlalchemy.orm import relationship
-from db import Base
+from NhaKhoa import Base
 from datetime import datetime
 
 
