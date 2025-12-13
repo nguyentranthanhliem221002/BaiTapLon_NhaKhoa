@@ -13,6 +13,7 @@ from flask_sqlalchemy import SQLAlchemy
 from oauthlib.oauth2 import WebApplicationClient
 
 from NhaKhoa import app
+from NhaKhoa.daos.schedule_dao import ScheduleDAO
 from NhaKhoa.daos.specialty_dao import SpecialtyDAO
 # Import DAO và Models
 from NhaKhoa.database.db import init_database, get_connection
@@ -78,6 +79,7 @@ serviceType_dao = ServiceTypeDAO()
 medicine_dao = MedicineDAO()
 medicineType_dao = MedicineTypeDAO()
 specialty_dao = SpecialtyDAO()
+schedule_dao = ScheduleDAO()
 
 @app.context_processor
 def inject_role_enum():
@@ -325,6 +327,9 @@ def my_appointments():
         })
 
     return render_template("patient/patient_appointments.html", events=events, doctors=doctors)
+
+
+
 @app.route("/appointment/add_ajax", methods=["POST"])
 @login_required(role=RoleEnum.PATIENT.value)
 def add_appointment_ajax():
@@ -507,35 +512,51 @@ def appointments():
 @app.route("/appointment/add", methods=["GET","POST"])
 @login_required()
 def add_appointment():
+    err = ""
     patients = patient_dao.get_all()
     specialties = specialty_dao.get_all()
+    available_schedules = []
 
     specialty_id = request.args.get('specialty_id', type=int)
     patient_id = request.args.get('patient_id', type=int)
+    appt_date = request.form.get('appointment_date')
 
     doctors = []
     if specialty_id:
         doctors = doctor_dao.get_doctors_by_specialty(specialty_id)
-    #
-    # if request.method == "POST":
-    #     data = request.form
-    #     specialty_id = int(request.form.get('specialty_id'))
-    #     id = int(data["patient_id"])
-    #     doctors = doctor_dao.get_doctors_by_specialty(specialty_id)
-    #     new_appointment = Appointment(
-    #         patient_id=id,
-    #         doctor_id=int(data["doctor_id"]),
-    #         appointment_date=data["appointment_date"],
-    #         description=data.get("description", "")
-    #     )
-    #     appointment_dao.add(new_appointment)
-    #     return redirect(url_for("appointments"))
+
+    if appt_date is not None:
+        format = '%Y-%m-%dT%H:%M'
+        datetime_obj = datetime.strptime(appt_date, format)
+
+        data = request.form
+        doctor_id = int(data["doctor_id"])
+
+        if doctor_id:
+            available_schedules = schedule_dao.get_all_available_schedules(doctor_id)
+            available_schedules = schedule_dao.get_available_schedules_by_time(
+                available_schedules,
+                datetime_obj
+            )
+            if available_schedules is None:
+                err = "Giờ chọn phải nằm trong khoảng từ 9 đến 16"
+
+    if request.method == "POST":
+        new_appointment = Appointment(
+            patient_id=patient_id,
+            appointment_date=data["appointment_date"],
+            description=data.get("description", "")
+        )
+        # appointment_dao.add(new_appointment)
+        # return redirect(url_for("appointments"))
     return render_template("appointment/appointment_add.html",
                            patients=patients,
                            doctors=doctors,
                            specialties=specialties,
                            selected_specialty=specialty_id,
-                           selected_patient=patient_id)
+                           selected_patient=patient_id,
+                           available_schedules=available_schedules,
+                           err=err)
 
 @app.route("/appointment/edit/<int:id>", methods=["GET","POST"])
 @login_required()
