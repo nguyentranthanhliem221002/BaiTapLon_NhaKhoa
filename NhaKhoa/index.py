@@ -110,6 +110,11 @@ def register():
 
         password = request.form["password"]
         confirm_password = request.form["confirm_password"]
+        date_of_birth = request.form["dob"]
+
+        if date_of_birth:
+            format = '%Y-%m-%d'
+            date_of_birth = datetime.strptime(date_of_birth, format)
 
         if password != confirm_password:
             return render_template("account/register.html", error="Mật khẩu không khớp!")
@@ -117,10 +122,11 @@ def register():
         if user_dao.get_by_username(username) or user_dao.get_by_username(email):
             return render_template("account/register.html", error="Tên tài khoản hoặc email đã tồn tại!")
 
-        new_user = User(username=username, password=password, email=email)
-        new_patient = Patient()
-        user_dao.register(new_user)
-        flash("Đăng ký thành công! Vui lòng đăng nhập.")
+        new_user = User(name=username, password=password, email=email)
+        try:
+            user_dao.register(new_user, date_of_birth)
+        finally:
+            flash("Đăng ký thành công! Vui lòng đăng nhập.")
         return redirect(url_for("login"))
 
     return render_template("account/register.html")
@@ -133,8 +139,10 @@ def login():
         user = user_dao.login(username_or_email, password)
         if user:
             session["user"] = user.name
+            session["user_id"] = user.id
             session["role"] = user.role_id
             return redirect(url_for("dashboard"))
+
         return render_template("account/login.html", error="Sai tài khoản hoặc mật khẩu!")
     return render_template("account/login.html")
 
@@ -195,7 +203,7 @@ def change_password():
         current = request.form["current_password"]
         new = request.form["new_password"]
         confirm = request.form["confirm_password"]
-        user = user_dao.get_by_username(session["user"])
+        user = user_dao.get_by_id(session["user_id"])
         if not user_dao.check_password(user, current):
             flash("Mật khẩu hiện tại không đúng!")
         elif new != confirm:
@@ -245,7 +253,7 @@ def google_callback():
     if email:
         existing = user_dao.get_by_username(email)
         if not existing:
-            new_user = User(username=email, password="google_oauth", email=email, role_id=RoleEnum.PATIENT.value)
+            new_user = User(name=email, password="google_oauth", email=email, role_id=RoleEnum.PATIENT.value)
             user_dao.register(new_user)
         session["user"] = email
         session["role"] = RoleEnum.PATIENT.value
@@ -361,11 +369,11 @@ def patient_doctors():
 def create_appointment():
     data = request.get_json()
 
-    username = session.get("user")
-    if not username:
+    user_id = session.get("user_id")
+    if not user_id:
         return jsonify({"success": False, "message": "User chưa đăng nhập!"})
 
-    user = user_dao.get_by_username(username)
+    user = user_dao.get_by_id(user_id)
     if not user:
         return jsonify({"success": False, "message": "User không tồn tại!"})
 
@@ -419,7 +427,7 @@ def create_appointment():
 @app.route("/appointments/cancel/<int:id>", methods=["POST"])
 @login_required(role=RoleEnum.PATIENT.value)
 def cancel_appointment(id):
-    user = user_dao.get_by_username(session["user"])
+    user = user_dao.get_by_id(session["user_id"])
     patient = patient_dao.get_by_user_id(user.id)
     appointment = appointment_dao.get_by_id(id)
 
@@ -435,7 +443,7 @@ def cancel_appointment(id):
 @app.route("/appointments/events")
 @login_required(role=RoleEnum.PATIENT.value)
 def appointments_events():
-    user = user_dao.get_by_username(session["user"])
+    user = user_dao.get_by_id(session["user_id"])
     patient = patient_dao.get_by_user_id(user.id)
     if not patient:
         return jsonify([])
@@ -456,9 +464,9 @@ def appointments_events():
     return jsonify(events)
 
 @app.route("/my_appointments")
-@login_required(role=RoleEnum.PATIENT.value)
+@login_required(role=RoleEnum.USER.value)
 def my_appointments():
-    user = user_dao.get_by_username(session["user"])
+    user = user_dao.get_by_id(session.get("user_id"))
     patient = patient_dao.get_by_user_id(user.id)
     if not patient:
         flash("Bệnh nhân không tồn tại!")
@@ -477,8 +485,8 @@ def my_appointments():
     for appt in appointments:
         events.append({
             "id": appt.id,
-            "title": appt.doctor.name if appt.doctor else "Bác sĩ chưa xác định",
-            "start": appt.appointment_date.strftime("%Y-%m-%dT%H:%M"),
+            "title": appt.schedule.doctor.name if appt.schedule.doctor.name else "Bác sĩ chưa xác định",
+            "start": appt.schedule.from_date.strftime("%Y-%m-%dT%H:%M"),
             "extendedProps": {
                 "id": appt.id,
                 "description": appt.description
@@ -505,7 +513,7 @@ def doctors_by_service(service_id):
 @login_required(role=RoleEnum.PATIENT.value)
 def add_appointment_ajax():
     data = request.json
-    user = user_dao.get_by_username(session["user"])
+    user = user_dao.get_by_id(session["user_id"])
     patient = patient_dao.get_by_user_id(user.id)
 
     new_appointment = Appointment(
@@ -669,16 +677,50 @@ def delete_doctor(id):
     return redirect(url_for("doctors"))
 
 # CRUD LỊCH HẸN (APPOINTMENT)
+# @app.route("/appointments")
+# @login_required()
+# def appointments():
+#     filter_by = request.args.get("filter_by")
+#     keyword = request.args.get("keyword", "").strip()
+#     if filter_by and keyword:
+#         all_appointments = appointment_dao.search(filter_by, keyword)
+#     else:
+#         all_appointments = appointment_dao.get_all()
+#     return render_template("appointment/appointments.html", appointments=all_appointments)
+
 @app.route("/appointments")
-@login_required()
 def appointments():
-    filter_by = request.args.get("filter_by")
-    keyword = request.args.get("keyword", "").strip()
+    filter_by = request.args.get('filter_by')
+    keyword = request.args.get('keyword', '').lower()
+
+    # Get appointments with all relationships preloaded
+    appointments = appointment_dao.get_all_with_doctor_names()
+
+    # Apply filtering if needed
     if filter_by and keyword:
-        all_appointments = appointment_dao.search(filter_by, keyword)
-    else:
-        all_appointments = appointment_dao.get_all()
-    return render_template("appointment/appointments.html", appointments=all_appointments)
+        if filter_by == 'patient':
+            appointments = [
+                a for a in appointments
+                if a.patient and keyword in a.patient.name.lower()
+            ]
+        elif filter_by == 'doctor':
+            appointments = [
+                a for a in appointments
+                if a.schedule and a.schedule.doctor and keyword in a.schedule.doctor.name.lower()
+            ]
+        elif filter_by == 'date':
+            try:
+                filter_date = datetime.strptime(keyword, '%Y-%m-%d').date()
+                appointments = [
+                    a for a in appointments
+                    if a.schedule and a.schedule.from_date.date() == filter_date
+                ]
+            except ValueError:
+                pass  # Ignore invalid date format
+
+    return render_template("appointment/appointments.html", appointments=appointments)
+
+
 
 @app.route("/appointment/add", methods=["GET","POST"])
 @login_required()
@@ -691,6 +733,7 @@ def add_appointment():
     schedule_id = None
     specialty_name = ""
     doctor_name = ""
+    user = user_dao.get_by_id(session["user_id"])
 
     specialty_id = request.args.get('specialty_id', type=int)
     patient_id = request.args.get('patient_id', type=int)
@@ -711,7 +754,6 @@ def add_appointment():
         datetime_obj_str = datetime_obj.strftime(format)
 
         if doctor_id:
-            doctor_name = doctor_dao.get_by_id(doctor_id).name
             available_schedules = schedule_dao.get_all_available_schedules(doctor_id)
             available_schedules = schedule_dao.get_available_schedules_by_time(
                 available_schedules,
@@ -728,11 +770,17 @@ def add_appointment():
         if schedule_id is not None:
             schedule_id = int(data.get("schedule_id"))
 
+    if session.get('role') != RoleEnum.PATIENT.value:
+        patient_id = patient_dao.get_by_user_id(user.id).id
+
     if request.method == "POST":
-        patient_id = data.get("patient_id")
+        doctor_id = int(data.get("doctor_id"))
+        doctor_name = doctor_dao.get_by_id(doctor_id).name
+        patient_id = patient_id
         schedule_id = data.get("schedule_id")
         description = data.get("description", "")
         name = f'Cuộc hẹn {specialty_name} với bác sĩ {doctor_name}'
+        print(f'{patient_id}{patient_id}')
         new_appointment = Appointment(
             name=name,
             patient_id=patient_id,

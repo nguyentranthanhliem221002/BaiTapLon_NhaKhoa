@@ -14,6 +14,28 @@ class AppointmentDAO:
                 .options(joinedload(Appointment.patient), joinedload(Appointment.schedule)) \
                 .all()
 
+    def get_all_with_details(self):
+        """Returns all appointments with patient, schedule, and doctor details preloaded."""
+        with get_session() as session:
+            return session.query(Appointment) \
+                .options(
+                joinedload(Appointment.patient),
+                joinedload(Appointment.schedule).joinedload(Schedule.doctor)
+            ) \
+                .all()
+
+    def get_all_with_doctor_names(self):
+        """Returns Appointment objects with all relationships preloaded."""
+        with get_session() as session:
+            pass
+        return session.query(Appointment) \
+            .options(
+            joinedload(Appointment.patient),  # Load patient
+            joinedload(Appointment.schedule)  # Load schedule
+            .joinedload(Schedule.doctor)  # Load doctor through schedule
+        ) \
+            .all()
+
     def get_by_id(self, id: int):
         with get_session() as session:
             return session.query(Appointment) \
@@ -30,9 +52,10 @@ class AppointmentDAO:
             session.merge(appointment)
             session.commit()
     def get_by_patient_id(self, patient_id: int):
-        with get_session() as session:
+        with (get_session() as session):
             return session.query(Appointment) \
-                .options(joinedload(Appointment.patient), joinedload(Appointment.schedule)) \
+                .options(joinedload(Appointment.patient), joinedload(Appointment.schedule)
+                .joinedload(Schedule.doctor)) \
                 .filter(Appointment.patient_id == patient_id).all()
     def delete(self, id: int):
         with get_session() as session:

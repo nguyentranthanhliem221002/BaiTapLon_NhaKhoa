@@ -8,7 +8,7 @@
 
     <form method="GET" action="{{ url_for('add_appointment') }}">
         <!-- Chọn bệnh nhân -->
-        <div class="mb-3">
+        <div class="mb-3" {% if session.get('role') != RoleEnum.PATIENT.value %}style="display: none;"{% endif %}>
             <label for="patient_id" class="form-label">Bệnh nhân</label>
             <select class="form-select" id="patient_id" name="patient_id" required>
                 <option value="" disabled {% if not selected_patient %}selected{% endif %}>Chọn bệnh nhân</option>

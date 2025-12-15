@@ -1,20 +1,32 @@
 from sqlalchemy.orm import Session
+
+from NhaKhoa.models.patient import Patient
 from NhaKhoa.models.user import User
 from NhaKhoa.database.db import get_session
 import bcrypt
 from datetime import datetime
 
 class UserDAO:
+    def get_by_id(self, id: int):
+        with get_session() as session:
+            return session.query(User).get(id)
+
     def get_by_username(self, username_or_email: str):
         with get_session() as session:
             return session.query(User).filter(
                 (User.name == username_or_email) | (User.email == username_or_email)
             ).first()
 
-    def register(self, user: User):
+    def register(self, user: User, date_of_birth: datetime):
         user.password = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt()).decode()
+        age = datetime.now().year - date_of_birth.year
+        patient = Patient(name=user.name, age=age)
         with get_session() as session:
             session.add(user)
+            session.add(patient)
+            session.commit()
+
+            patient.user_id = user.id
             session.commit()
 
     def login(self, username_or_email: str, password: str):

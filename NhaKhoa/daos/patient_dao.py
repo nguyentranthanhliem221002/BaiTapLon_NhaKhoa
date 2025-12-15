@@ -22,7 +22,7 @@ class PatientDAO:
             raw_password = "1"
             hashed_password = bcrypt.hashpw(raw_password.encode(), bcrypt.gensalt()).decode()
 
-            user = User(username=username, password=hashed_password, email="", role_id=RoleEnum.PATIENT.value)
+            user = User(name=username, password=hashed_password, email="", role_id=RoleEnum.PATIENT.value)
             session.add(user)
             session.commit()
 

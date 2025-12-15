@@ -181,7 +181,7 @@
 
                 <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>
 
-            {% elif session['role'] == RoleEnum.PATIENT.value %}
+            {% elif session['role'] == RoleEnum.PATIENT.value or session['role'] == RoleEnum.USER.value %}
                 <div class="dropdown me-3">
                     <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                         Lịch hẹn
