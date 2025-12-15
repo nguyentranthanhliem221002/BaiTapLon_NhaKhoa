@@ -27,53 +27,63 @@
                 {% endfor %}
             </select>
         </div>
-    </form>
 
-    <form method="POST" action="{{ url_for('add_appointment') }}">
         {% if doctors %}
         <!-- Chọn bác sĩ -->
         <div class="mb-3">
             <label for="doctor_id" class="form-label">Bác sĩ</label>
-            <select class="form-select" id="doctor_id" name="doctor_id" required>
+            <select class="form-select" id="doctor_id" name="doctor_id" required onchange="this.form.submit()">
                 <option value="" disabled selected>Chọn bác sĩ</option>
                 {% for doctor in doctors %}
-                <option value="{{ doctor.id }}">{{ doctor.name }}</option>
+                <option value="{{ doctor.id }}" {% if doctor.id == selected_doctor %}selected{% endif %}>{{ doctor.name }}</option>
                 {% endfor %}
             </select>
         </div>
         {% endif %}
-
         <!-- Ngày giờ hẹn -->
         <div class="mb-3">
             <label for="appointment_date" class="form-label">Ngày hẹn</label>
-            <input type="datetime-local" class="form-control" id="appointment_date" name="appointment_date" required>
+            <input type="datetime-local"
+                   class="form-control"
+                   id="appointment_date"
+                   name="appointment_date"
+                   value="{{ fm_datetime }}"
+                   onchange="this.form.submit()">
+        </div>
+    </form>
+
+    {% if available_schedules %}
+    <form method="POST" action="{{ url_for('add_appointment') }}" class="mt-3">
+        <!-- Schedule Selection -->
+        <div class="mb-3">
+            <label for="schedule_id" class="form-label">Lịch khám có sẵn</label>
+            <select class="form-select" id="schedule_id" name="schedule_id" required>
+                <option value="" disabled selected>Chọn lịch khám</option>
+                {% for schedule in available_schedules %}
+                <option value="{{ schedule.id }}">
+                    {{ schedule.from_date.strftime('%H:%M') }} - {{ schedule.to_date.strftime('%H:%M') }} | {{ schedule.from_date.strftime('%d/%m/%Y') }}
+                </option>
+                {% endfor %}
+            </select>
         </div>
 
-        <!-- Chọn lịch khám -->
-        <div class="mb-3">
-        <label for="schedule_id" class="form-label">Lịch khám có sẵn</label>
-        <select class="form-select" id="schedule_id" name="schedule_id">
-            <option value="" disabled selected>Chọn lịch khám</option>
-            {% for schedule in available_schedules %}
-            <option value="{{ schedule.id }}">
-                {{ schedule.from_date.strftime('%H:%M %d/%m/%Y') }} -
-                {{ schedule.to_date.strftime('%H:%M') }}
-            </option>
-            {% endfor %}
-        </select>
-    </div>
-
-        <!-- Mô tả -->
+        <!-- Description -->
         <div class="mb-3">
             <label for="description" class="form-label">Mô tả</label>
-            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+            <textarea class="form-select" id="description" name="description" rows="3"></textarea>
         </div>
+
+        <!-- Hidden fields for POST -->
+        <input type="hidden" name="patient_id" value="{{ selected_patient }}">
+        <input type="hidden" name="doctor_id" value="{{ selected_doctor }}">
+        <input type="hidden" name="appointment_date" value="{{ selected_datetime }}">
 
         <div class="d-flex justify-content-between">
             <button type="submit" class="btn btn-success">Thêm lịch hẹn</button>
             <a href="{{ url_for('appointments') }}" class="btn btn-secondary">Hủy</a>
         </div>
     </form>
+    {% endif %}
 </div>
 {% endblock %}
 <script>
