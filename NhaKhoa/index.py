@@ -301,7 +301,7 @@ def add_patient():
 
     return render_template("patient/patient_add.html")
 @app.route("/patient/doctors")
-@login_required(role=RoleEnum.PATIENT.value)
+@login_required(role=RoleEnum.USER.value)
 def patient_doctors():
     doctors = doctor_dao.get_all()
 
@@ -425,7 +425,7 @@ def create_appointment():
 
 
 @app.route("/appointments/cancel/<int:id>", methods=["POST"])
-@login_required(role=RoleEnum.PATIENT.value)
+@login_required(role=RoleEnum.USER.value)
 def cancel_appointment(id):
     user = user_dao.get_by_id(session["user_id"])
     patient = patient_dao.get_by_user_id(user.id)
@@ -441,7 +441,7 @@ def cancel_appointment(id):
     return jsonify({"success": True, "message": "Hủy lịch hẹn thành công!"})
 
 @app.route("/appointments/events")
-@login_required(role=RoleEnum.PATIENT.value)
+@login_required(role=RoleEnum.USER.value)
 def appointments_events():
     user = user_dao.get_by_id(session["user_id"])
     patient = patient_dao.get_by_user_id(user.id)
@@ -510,7 +510,7 @@ def doctors_by_service(service_id):
     result = [{"id": d.id, "name": d.name} for d in doctors]
     return jsonify(result)
 @app.route("/appointment/add_ajax", methods=["POST"])
-@login_required(role=RoleEnum.PATIENT.value)
+@login_required(role=RoleEnum.USER.value)
 def add_appointment_ajax():
     data = request.json
     user = user_dao.get_by_id(session["user_id"])
