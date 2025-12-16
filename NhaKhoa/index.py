@@ -614,11 +614,12 @@ def doctors():
 @app.route("/doctor/add", methods=["GET","POST"])
 @login_required(role=RoleEnum.ADMIN.value)
 def add_doctor():
+    specialties = specialty_dao.get_all()
     if request.method == "POST":
         data = request.form
         new_doctor = Doctor(
             name=data["name"],
-            specialty=data["specialty"],
+            specialty=int(data["specialty"]),
             phone=data["phone"]
         )
 
@@ -633,7 +634,7 @@ def add_doctor():
 
         doctor_dao.add(new_doctor)
         return redirect(url_for("doctors"))
-    return render_template("doctor/doctor_add.html")
+    return render_template("doctor/doctor_add.html", specialties=specialties)
 
 # @app.route("/doctor/edit/<int:id>", methods=["GET","POST"])
 # @login_required(role="admin")

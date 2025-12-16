@@ -13,8 +13,13 @@
         </div>
 
         <div class="mb-3">
-            <label for="specialty" class="form-label">Chuyên môn</label>
-            <input type="text" class="form-control" id="specialty" name="specialty" required>
+            <label for="specialty_id" class="form-label">Chuyên môn</label>
+            <select class="form-select" id="specialty_id" name="specialty_id" required>
+                <option value="" disabled selected>Chọn chuyên môn</option>
+                {% for specialty in specialties %}
+                <option value="{{ specialty.id }}">{{ specialty.name }}</option>
+                {% endfor %}
+            </select>
         </div>
 
         <div class="mb-3">

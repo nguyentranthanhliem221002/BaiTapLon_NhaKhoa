@@ -11,6 +11,8 @@ from NhaKhoa.models import serviceType
 
 class Service(Base):
     __tablename__ = "services"
+
+    name = Column(String(100), nullable=False)
     service_type_id = Column(Integer, ForeignKey('service_types.id'))
     price = Column(Float, nullable=False)
 

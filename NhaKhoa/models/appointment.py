@@ -6,6 +6,7 @@ class Appointment(Base):
     __tablename__ = "appointments"
     __table_args__ = {"extend_existing": True}
 
+    name = Column(String(100), nullable=False)
     patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
     schedule_id = Column(Integer, ForeignKey("schedules.id"), nullable=False)
     description = Column(String(255), default="")

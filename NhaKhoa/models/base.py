@@ -11,6 +11,5 @@ Base1 = declarative_base(metadata=metadata)
 class Base(Base1):
     __abstract__ = True
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(100), nullable=False)
     created_date = Column(DateTime, default=datetime.now())
     active = Column(Boolean, default=True)
