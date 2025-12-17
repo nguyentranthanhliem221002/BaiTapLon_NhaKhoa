@@ -772,7 +772,15 @@ def add_appointment():
             schedule_id = int(data.get("schedule_id"))
 
     if session.get('role') != RoleEnum.PATIENT.value:
-        patient_id = patient_dao.get_by_user_id(user.id).id
+
+        patient = patient_dao.get_by_user_id(user.id)
+        if not patient:
+            flash("Bệnh nhân không tồn tại!")
+            return redirect(url_for("appointments"))
+        patient_id = patient.id
+    else:
+        # Nếu là nhân viên/admin, lấy từ form hoặc args
+        patient_id = request.form.get("patient_id") or patient_id
 
     if request.method == "POST":
         doctor_id = int(data.get("doctor_id"))
@@ -783,9 +791,9 @@ def add_appointment():
         name = f'Cuộc hẹn {specialty_name} với bác sĩ {doctor_name}'
         print(f'{patient_id}{patient_id}')
         new_appointment = Appointment(
-            name=name,
-            patient_id=patient_id,
-            schedule_id=schedule_id,
+            name=f'Cuộc hẹn {specialty_name} với bác sĩ {doctor_name}',
+            patient_id=patient_id,  # chắc chắn không None
+            schedule_id=int(schedule_id),
             description=description
         )
         # print(f'Appointment {new_appointment.patient_id} - {new_appointment.schedule_id} - {new_appointment.description}')
