@@ -57,14 +57,14 @@ def get_google_provider_cfg():
     return requests.get(GOOGLE_DISCOVERY_URL).json()
 
 # DECORATOR PHÂN QUYỀN
-def login_required(role=None):
+def login_required(*roles):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if "user" not in session:
                 flash("Vui lòng đăng nhập!")
                 return redirect(url_for("login"))
-            if role and session.get("role") != role:
+            if roles and session.get("role") not in roles:
                 flash("Bạn không có quyền truy cập!")
                 return redirect(url_for("dashboard"))
             return f(*args, **kwargs)
@@ -301,7 +301,7 @@ def add_patient():
 
     return render_template("patient/patient_add.html")
 @app.route("/patient/doctors")
-@login_required(role=RoleEnum.USER.value)
+@login_required(RoleEnum.USER.value)
 def patient_doctors():
     doctors = doctor_dao.get_all()
 
@@ -425,7 +425,7 @@ def create_appointment():
 
 
 @app.route("/appointments/cancel/<int:id>", methods=["POST"])
-@login_required(role=RoleEnum.USER.value)
+@login_required(RoleEnum.USER.value)
 def cancel_appointment(id):
     user = user_dao.get_by_id(session["user_id"])
     patient = patient_dao.get_by_user_id(user.id)
@@ -441,7 +441,7 @@ def cancel_appointment(id):
     return jsonify({"success": True, "message": "Hủy lịch hẹn thành công!"})
 
 @app.route("/appointments/events")
-@login_required(role=RoleEnum.USER.value)
+@login_required(RoleEnum.USER.value)
 def appointments_events():
     user = user_dao.get_by_id(session["user_id"])
     patient = patient_dao.get_by_user_id(user.id)
@@ -464,7 +464,7 @@ def appointments_events():
     return jsonify(events)
 
 @app.route("/my_appointments")
-@login_required(role=RoleEnum.USER.value)
+@login_required(RoleEnum.USER.value, RoleEnum.PATIENT.value)
 def my_appointments():
     user = user_dao.get_by_id(session.get("user_id"))
     patient = patient_dao.get_by_user_id(user.id)
@@ -510,7 +510,7 @@ def doctors_by_service(service_id):
     result = [{"id": d.id, "name": d.name} for d in doctors]
     return jsonify(result)
 @app.route("/appointment/add_ajax", methods=["POST"])
-@login_required(role=RoleEnum.USER.value)
+@login_required(RoleEnum.USER.value)
 def add_appointment_ajax():
     data = request.json
     user = user_dao.get_by_id(session["user_id"])
@@ -612,7 +612,7 @@ def doctors():
 #     return render_template("doctor/doctor_add.html")
 
 @app.route("/doctor/add", methods=["GET","POST"])
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def add_doctor():
     specialties = specialty_dao.get_all()
     if request.method == "POST":
@@ -650,7 +650,7 @@ def add_doctor():
 #     return render_template("doctor/doctor_edit.html", doctor=doctor)
 
 @app.route("/doctor/edit/<int:id>", methods=["GET","POST"])
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def edit_doctor(id):
     doctor = doctor_dao.get_by_id(id)
     specialty_name = specialty_dao.get_name_by_id(doctor.specialty_id)
@@ -672,7 +672,7 @@ def edit_doctor(id):
     return render_template("doctor/doctor_edit.html", doctor=doctor, specialty_name=specialty_name)
 
 @app.route("/doctor/delete/<int:id>")
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def delete_doctor(id):
     doctor_dao.delete(id)
     return redirect(url_for("doctors"))
@@ -831,7 +831,7 @@ def service_types():
     return render_template("service/service_types.html", types=serviceType_dao.get_all_service_types())
 
 @app.route("/service-type/add", methods=["GET","POST"])
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def add_service_type():
     if request.method == "POST":
         name = request.form["name"]
@@ -852,7 +852,7 @@ def services():
     return render_template("service/services.html", services=all_services)
 
 @app.route("/service/add", methods=["GET","POST"])
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def add_service():
     types = serviceType_dao.get_all_service_types()
     if request.method == "POST":
@@ -863,7 +863,7 @@ def add_service():
     return render_template("service/service_add.html", types=types)
 
 @app.route("/service/edit/<int:id>", methods=["GET","POST"])
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def edit_service(id):
     service = service_dao.get_service_by_id(id)
     if not service:
@@ -881,7 +881,7 @@ def edit_service(id):
     return render_template("service/service_edit.html", service=service, types=types)
 
 @app.route("/service/delete/<int:id>")
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def delete_service(id):
     db = get_connection()
     cursor = db.cursor()
@@ -904,7 +904,7 @@ def medicine_types():
 
 
 @app.route("/medicineType/add", methods=["GET","POST"])
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def add_medicine_type():
     if request.method == "POST":
         name = request.form["name"]
@@ -914,7 +914,7 @@ def add_medicine_type():
     return render_template("medicineType/medicineType_add.html")
 
 @app.route("/medicine-type/edit/<int:id>", methods=["GET", "POST"])
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def edit_medicine_type(id):
     type_to_edit = medicineType_dao.get_by_id(id)  # dùng instance đã init sẵn
 
@@ -932,7 +932,7 @@ def edit_medicine_type(id):
     return render_template("medicineType/medicineType_edit.html", type_obj=type_to_edit)
 
 @app.route("/medicine-type/delete/<int:id>")
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def delete_medicine_type(id):
     # Gọi DAO để xóa
     success = medicineType_dao.delete(id)
@@ -950,7 +950,7 @@ def medicines():
     return render_template("medicine/medicines.html", medicines=meds, types=types)
 
 @app.route("/medicine/add", methods=["GET","POST"])
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def add_medicine():
     types = medicineType_dao.get_all_medicine_types()
     if request.method == "POST":
@@ -962,7 +962,7 @@ def add_medicine():
 
 # CRUD THUỐC / LOẠI THUỐC (MEDICINE / MEDICINE TYPE)
 @app.route("/medicine/edit/<int:id>", methods=["GET","POST"])
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def edit_medicine(id):
     medicine = medicine_dao.get_by_id(id)
     if not medicine:
@@ -980,7 +980,7 @@ def edit_medicine(id):
     return render_template("medicine/medicine_edit.html", medicine=medicine, types=types)
 
 @app.route("/medicine/delete/<int:id>")
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def delete_medicine(id):
     db = get_connection()
     cursor = db.cursor()
@@ -1002,7 +1002,7 @@ def bills():
     return render_template("bill/bills.html", bills=all_bills)
 
 @app.route("/bill/add/<int:appointment_id>", methods=["GET","POST"])
-@login_required(role=RoleEnum.ADMIN.value)
+@login_required(RoleEnum.ADMIN.value)
 def add_bill(appointment_id):
     appointment = appointment_dao.get_by_id(appointment_id)
     if not appointment:

@@ -1,5 +1,5 @@
 # NhaKhoa/models/schedule.py
-from sqlalchemy import Column, Integer, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
 from NhaKhoa.models.base import Base
 
