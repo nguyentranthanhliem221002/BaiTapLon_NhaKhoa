@@ -17,3 +17,4 @@ class Service(Base):
     price = Column(Float, nullable=False)
 
     service_type = relationship('ServiceType', back_populates='services', lazy=True)
+    bill_services = relationship("BillService", back_populates="service")

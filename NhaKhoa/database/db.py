@@ -12,6 +12,7 @@ from NhaKhoa.models.base import Base
 from NhaKhoa.models.role import RoleEnum, Role
 from NhaKhoa.models.schedule import Schedule
 from NhaKhoa.models.specialty import Specialty
+from NhaKhoa.models.status import Status
 
 # ==============================
 # TẠO DATABASE NẾU CHƯA CÓ
@@ -66,6 +67,17 @@ def init_database():
                 Role(name="patient", description="Patient"),
                 Role(name="doctor", description="Doctor"),
                 Role(name="admin", description="Administrator")
+            ])
+            db.commit()
+
+        # --- Statuses --- (NEW SECTION)
+        if db.scalar(select(func.count()).select_from(Status)) == 0:
+            db.add_all([
+                Status(name="Chưa thanh toán", description="Hóa đơn chưa được thanh toán"),
+                Status(name="Đã thanh toán", description="Hóa đơn đã được thanh toán"),
+                Status(name="Đã hủy", description="Hóa đơn đã bị hủy"),
+                Status(name="Đang xử lý", description="Hóa đơn đang được xử lý"),
+                Status(name="Hoàn thành", description="Hóa đơn đã hoàn thành")
             ])
             db.commit()
         # --- Users ---

@@ -13,4 +13,4 @@ class Appointment(Base):
 
     patient = relationship("Patient", back_populates="appointments")
     schedule = relationship("Schedule", back_populates="appointments")
-    bills = relationship("Bill", back_populates="appointment")
+    bill = relationship("Bill", back_populates="appointment")

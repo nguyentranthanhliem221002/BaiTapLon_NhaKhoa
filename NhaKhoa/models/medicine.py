@@ -12,3 +12,4 @@ class Medicine(Base):
     price = Column(Float, default=0)
 
     medicine_type = relationship('MedicineType', back_populates='medicines', lazy=True)
+    bill_medicines = relationship("BillMedicine", back_populates="medicine")
