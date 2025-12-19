@@ -10,6 +10,7 @@ class Medicine(Base):
     name = Column(String(100), nullable=False)
     medicine_type_id = Column(Integer, ForeignKey('medicine_types.id'))
     price = Column(Float, default=0)
+    status = Column(Integer, default=0)
 
     medicine_type = relationship('MedicineType', back_populates='medicines', lazy=True)
     bill_medicines = relationship("BillMedicine", back_populates="medicine")

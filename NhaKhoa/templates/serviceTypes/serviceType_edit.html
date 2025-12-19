@@ -1,0 +1,19 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Sửa loại dịch vụ{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Sửa loại dịch vụ</h2>
+
+    <form method="POST" class="mt-4">
+        <div class="mb-3">
+            <label class="form-label">Tên loại dịch vụ</label>
+            <input type="text" name="name" class="form-control" value="{{ type.name }}" required>
+        </div>
+
+        <button type="submit" class="btn btn-success">Cập nhật</button>
+        <a href="{{ url_for('serviceTypes') }}" class="btn btn-secondary">Hủy</a>
+    </form>
+</div>
+{% endblock %}

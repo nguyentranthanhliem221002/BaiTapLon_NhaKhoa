@@ -7,5 +7,6 @@ class MedicineType(Base):
     __table_args__ = {"extend_existing": True}
 
     name = Column(String(100), nullable=False)
+    status = Column(Integer, default=0)
 
     medicines = relationship('Medicine', back_populates='medicine_type', lazy=True)

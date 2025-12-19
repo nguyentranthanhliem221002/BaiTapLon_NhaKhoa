@@ -95,5 +95,12 @@ class AppointmentDAO:
                 except ValueError:
                     return []
             return query.all()
+    def exists_by_patient_and_schedule(self, patient_id: int, schedule_id: int):
+        with get_session() as session:
+            return session.query(Appointment).filter(
+                Appointment.patient_id == patient_id,
+                Appointment.schedule_id == schedule_id,
+                Appointment.active == 1
+            ).first() is not None
 
 

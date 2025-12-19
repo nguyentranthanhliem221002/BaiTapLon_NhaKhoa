@@ -259,7 +259,6 @@ def google_callback():
         session["role"] = RoleEnum.PATIENT.value
     return redirect(url_for("dashboard"))
 
-# CRUD PATIENT
 @app.route("/patients")
 @login_required()
 def patients():
@@ -271,37 +270,42 @@ def patients():
     else:
         all_patients = patient_dao.get_all()
 
-    return render_template("patient/patients.html", patients=all_patients)
-# CRUD Patient với ảnh
+    return render_template(
+        "patient/patients.html",
+        patients=all_patients
+    )
 
 @app.route("/patient/add", methods=["GET", "POST"])
 @login_required()
 def add_patient():
     if request.method == "POST":
         data = request.form
+
         new_patient = Patient(
             name=data["name"],
             age=int(data["age"]),
             phone=data["phone"],
-            address=data["address"]
+            address=data["address"],
+            status=0   # QUAN TRỌNG
         )
 
         # Upload ảnh
-        file = request.files.get('image')
-        if file and file.filename != '':
+        file = request.files.get("image")
+        if file and file.filename:
             filename = secure_filename(file.filename)
-            upload_folder = os.path.join(app.static_folder, 'uploads')
-            os.makedirs(upload_folder, exist_ok=True)  # tạo folder nếu chưa có
+            upload_folder = os.path.join(app.static_folder, "uploads")
+            os.makedirs(upload_folder, exist_ok=True)
             file.save(os.path.join(upload_folder, filename))
-            new_patient.image = filename  # gán tên file vào model
+            new_patient.image = filename
 
         patient_dao.add(new_patient)
         flash("Thêm bệnh nhân thành công!")
         return redirect(url_for("patients"))
 
     return render_template("patient/patient_add.html")
+
 @app.route("/patient/doctors")
-@login_required(RoleEnum.USER.value)
+@login_required(RoleEnum.USER.value, RoleEnum.PATIENT.value)
 def patient_doctors():
     doctors = doctor_dao.get_all()
 
@@ -316,113 +320,86 @@ def patient_doctors():
     return render_template("patient/patient_doctors.html", doctors=doctors)
 
 # @app.route('/appointments/create', methods=['POST'])
+# @login_required()
 # def create_appointment():
 #     data = request.get_json()
 #
-#     username = session.get("user")
-#     if not username:
-#         return jsonify({"success": False, "message": "User chưa đăng nhập!"})
-#
-#     user = user_dao.get_by_username(username)
-#     if not user:
-#         return jsonify({"success": False, "message": "User không tồn tại!"})
-#
+#     user = user_dao.get_by_id(session["user_id"])
 #     patient = patient_dao.get_by_user_id(user.id)
-#     if not patient:
-#         return jsonify({"success": False, "message": "Bệnh nhân chưa tồn tại!"})
 #
-#     try:
-#         appointment_date = datetime.fromisoformat(data.get("appointment_date"))
-#     except:
-#         return jsonify({"success": False, "message": "Ngày giờ không hợp lệ!"})
+#     schedule_id = int(data.get("schedule_id"))
+#     schedule = schedule_dao.get_by_id(schedule_id)
 #
-#     new_appointment = Appointment(
+#     if not schedule:
+#         return jsonify(success=False, message="Khung giờ không tồn tại")
+#
+#     if schedule.num_patient >= schedule.max_patient:
+#         return jsonify(success=False, message="Khung giờ đã đầy")
+#
+#     # ✅ tăng slot
+#     schedule.num_patient += 1
+#     schedule_dao.update(schedule)
+#
+#     appointment = Appointment(
 #         patient_id=patient.id,
-#         service_id=data.get('service_id'),
-#         doctor_id=int(data.get('doctor_id')),
-#         schedule_id=int(data.get('schedule_id')),
-#         appointment_date=appointment_date,
-#         description=data.get('description', ""),
-#         name=data.get('name', f"Appointment-{patient.id}-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+#         schedule_id=schedule.id,
+#         description=data.get("description", ""),
+#         name=f"Lịch khám với BS. {schedule.doctor.name}"
 #     )
 #
-#     try:
-#         appointment_dao.add(new_appointment)
-#         doctor = doctor_dao.get_by_id(new_appointment.doctor_id)
+#     appointment_dao.add(appointment)
 #
-#         return jsonify({
-#             "success": True,
-#             "message": "Đặt lịch thành công",
-#             "event": {
-#                 "id": new_appointment.id,
-#                 "title": doctor.name if doctor else "Bác sĩ chưa xác định",
-#                 "start": new_appointment.appointment_date.isoformat(),
-#                 "description": new_appointment.description
-#             }
-#         })
-#     except Exception as e:
-#         return jsonify({"success": False, "message": str(e)})
-#
-
+#     return jsonify({
+#         "success": True,
+#         "appointment_id": appointment.id,
+#         "doctor_name": schedule.doctor.name,
+#         "start_time": schedule.from_date.isoformat()
+#     })
 
 @app.route('/appointments/create', methods=['POST'])
+@login_required()
 def create_appointment():
     data = request.get_json()
 
-    user_id = session.get("user_id")
-    if not user_id:
-        return jsonify({"success": False, "message": "User chưa đăng nhập!"})
-
-    user = user_dao.get_by_id(user_id)
-    if not user:
-        return jsonify({"success": False, "message": "User không tồn tại!"})
-
+    user = user_dao.get_by_id(session["user_id"])
     patient = patient_dao.get_by_user_id(user.id)
-    if not patient:
-        return jsonify({"success": False, "message": "Bệnh nhân chưa tồn tại!"})
 
-    try:
-        appointment_date = datetime.fromisoformat(data.get("appointment_date"))
-    except:
-        return jsonify({"success": False, "message": "Ngày giờ không hợp lệ!"})
+    schedule_id = int(data.get("schedule_id"))
+    schedule = schedule_dao.get_by_id(schedule_id)
 
-    # ==== Check trùng lịch ====
-    existing = appointment_dao.get_by_doctor_and_date(
-        doctor_id=int(data.get('doctor_id')),
-        appointment_date=appointment_date
-    )
-    if existing:
-        return jsonify({"success": False, "message": "Lịch hẹn trùng! Vui lòng chọn thời gian khác."})
-    # =========================
+    if not schedule:
+        return jsonify(success=False, message="Khung giờ không tồn tại")
 
-    new_appointment = Appointment(
+    # ❌ CHECK TRÙNG LỊCH
+    if appointment_dao.exists_by_patient_and_schedule(patient.id, schedule_id):
+        return jsonify(
+            success=False,
+            message="Bạn đã có lịch hẹn ở khung giờ này rồi!"
+        )
+
+    # ❌ CHECK FULL SLOT
+    if schedule.num_patient >= schedule.max_patient:
+        return jsonify(success=False, message="Khung giờ đã đầy")
+
+    # ✅ tăng slot
+    schedule.num_patient += 1
+    schedule_dao.update(schedule)
+
+    appointment = Appointment(
         patient_id=patient.id,
-        service_id=data.get('service_id'),
-        doctor_id=int(data.get('doctor_id')),
-        schedule_id=int(data.get('schedule_id')),
-        appointment_date=appointment_date,
-        description=data.get('description', ""),
-        name=data.get('name', f"Appointment-{patient.id}-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+        schedule_id=schedule.id,
+        description=data.get("description", ""),
+        name=f"Lịch khám với BS. {schedule.doctor.name}"
     )
 
-    try:
-        appointment_dao.add(new_appointment)
-        doctor = doctor_dao.get_by_id(new_appointment.doctor_id)
+    appointment_dao.add(appointment)
 
-        return jsonify({
-            "success": True,
-            "message": "Đặt lịch thành công",
-            "event": {
-                "id": new_appointment.id,
-                "title": doctor.name if doctor else "Bác sĩ chưa xác định",
-                "start": new_appointment.appointment_date.strftime("%Y-%m-%dT%H:%M")
-                ,
-                "description": new_appointment.description
-            }
-        })
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
-
+    return jsonify({
+        "success": True,
+        "appointment_id": appointment.id,
+        "doctor_name": schedule.doctor.name,
+        "start_time": schedule.from_date.isoformat()
+    })
 
 @app.route("/appointments/cancel/<int:id>", methods=["POST"])
 @login_required(RoleEnum.USER.value)
@@ -469,46 +446,87 @@ def my_appointments():
     user = user_dao.get_by_id(session.get("user_id"))
     patient = patient_dao.get_by_user_id(user.id)
     if not patient:
-        flash("Bệnh nhân không tồn tại!")
+        flash("Bệnh nhân không tồn tại!", "danger")
         return redirect(url_for("dashboard"))
 
-    # Lấy appointment của patient
-    appointments = appointment_dao.get_by_patient_id(patient.id)
-
+    # Lấy tất cả dữ liệu cần thiết cho form đặt lịch
+    service_types = serviceType_dao.get_all_service_types()
+    services = service_dao.get_all_services()  # sẽ lọc bằng JS nếu cần
     doctors = doctor_dao.get_all()
-    services = service_dao.get_all_services()
 
-    # Lấy tham số format từ query string
-    response_format = request.args.get("format", "html").lower()
+    # Lấy appointments để hiển thị trên lịch
+    appointments = appointment_dao.get_by_patient_id(patient.id)
 
     events = []
     for appt in appointments:
+        doctor_name = appt.schedule.doctor.name if appt.schedule and appt.schedule.doctor else "Chưa xác định"
         events.append({
             "id": appt.id,
-            "title": appt.schedule.doctor.name if appt.schedule.doctor.name else "Bác sĩ chưa xác định",
-            "start": appt.schedule.from_date.strftime("%Y-%m-%dT%H:%M"),
+            "title": doctor_name,
+            "start": appt.schedule.from_date.isoformat() if appt.schedule else "",
             "extendedProps": {
-                "id": appt.id,
-                "description": appt.description
+                "description": appt.description or "Không có mô tả"
             }
         })
 
-    if response_format == "json":
-        return jsonify(events)
-    else:
-        return render_template(
-            "patient/patient_appointments.html",
-            events=events,
-            doctors=doctors,
-            services=services
-        )
+    return render_template(
+        "patient/patient_appointments.html",
+        events=events,
+        service_types=service_types,
+        services=services,
+        doctors=doctors,
+        patient_id=patient.id
+    )
+@app.route("/api/services_by_type/<int:type_id>")
+def api_services_by_type(type_id):
+    services = service_dao.get_services_by_type(type_id)
+    return jsonify([{"id": s.id, "name": s.name, "price": s.price} for s in services])
 
+@app.route("/api/available_schedules")
+def api_available_schedules():
+    doctor_id = request.args.get('doctor_id', type=int)
+    date_str = request.args.get('date')
 
+    if not doctor_id or not date_str:
+        return jsonify([])
+
+    try:
+        # Xử lý linh hoạt: chỉ ngày hoặc có giờ
+        if 'T' in date_str:
+            # Có giờ: "2025-12-30T10:00"
+            if len(date_str) == 16:
+                date_str += ':00'
+            dt = datetime.fromisoformat(date_str)
+        else:
+            # Chỉ ngày: "2025-12-30"
+            dt = datetime.strptime(date_str, "%Y-%m-%d")
+
+        selected_date = dt.date()
+
+        schedules = schedule_dao.get_available_schedules_by_doctor_and_date(doctor_id, selected_date)
+
+        return jsonify([{
+            "id": s.id,
+            "from": s.from_date.strftime("%H:%M"),
+            "to": s.to_date.strftime("%H:%M"),
+        } for s in schedules])
+
+    except Exception as e:
+        print("Lỗi load lịch:", e)
+        return jsonify([])
 @app.route("/doctors/by-service/<int:service_id>")
 def doctors_by_service(service_id):
     doctors = doctor_dao.get_doctors_by_specialty(service_id)  # hoặc service_id nếu mapping đúng
     result = [{"id": d.id, "name": d.name} for d in doctors]
     return jsonify(result)
+@app.route("/api/doctors_by_service_type/<int:service_type_id>")
+def api_doctors_by_service_type(service_type_id):
+    service_type = serviceType_dao.get_by_id(service_type_id)
+    if service_type and hasattr(service_type, 'specialty_id') and service_type.specialty_id:
+        doctors = doctor_dao.get_doctors_by_specialty(service_type.specialty_id)
+    else:
+        doctors = doctor_dao.get_all()  # fallback
+    return jsonify([{"id": d.id, "name": d.name} for d in doctors])
 @app.route("/appointment/add_ajax", methods=["POST"])
 @login_required(RoleEnum.USER.value)
 def add_appointment_ajax():
@@ -527,69 +545,53 @@ def add_appointment_ajax():
     return {"success": True, "id": new_appointment.id, "doctor_name": doctor.name}
 
 
-
 @app.route("/patient/edit/<int:id>", methods=["GET", "POST"])
 @login_required()
 def edit_patient(id):
-    patient = patient_dao.get_by_id(id)
+    patient = patient_dao.get_by_id(id)  # đã filter status = 0
     if not patient:
-        flash("Bệnh nhân không tồn tại!")
+        flash("Bệnh nhân không tồn tại hoặc đã bị xóa!")
         return redirect(url_for("patients"))
 
     if request.method == "POST":
         data = request.form
+
         patient.name = data["name"]
         patient.age = int(data["age"])
         patient.phone = data["phone"]
         patient.address = data["address"]
 
         # Upload ảnh mới nếu có
-        file = request.files.get('image')
-        if file and file.filename != '':
+        file = request.files.get("image")
+        if file and file.filename:
             filename = secure_filename(file.filename)
-            upload_folder = os.path.join(app.static_folder, 'uploads')
+            upload_folder = os.path.join(app.static_folder, "uploads")
             os.makedirs(upload_folder, exist_ok=True)
             file.save(os.path.join(upload_folder, filename))
-            patient.image = filename  # cập nhật ảnh mới
+            patient.image = filename
 
         patient_dao.update(patient)
         flash("Cập nhật bệnh nhân thành công!")
         return redirect(url_for("patients"))
 
-    return render_template("patient/patient_edit.html", patient=patient)
-
-#
-# @app.route("/patient/add", methods=["GET","POST"])
-# @login_required()
-# def add_patient():
-#     if request.method == "POST":
-#         data = request.form
-#         new_patient = Patient(name=data["name"], age=int(data["age"]), phone=data["phone"], address=data["address"])
-#         patient_dao.add(new_patient)
-#         return redirect(url_for("patients"))
-#     return render_template("patient/patient_add.html")
-#
-# @app.route("/patient/edit/<int:id>", methods=["GET","POST"])
-# @login_required()
-# def edit_patient(id):
-#     patient = patient_dao.get_by_id(id)
-#     if request.method == "POST":
-#         data = request.form
-#         patient.name = data["name"]
-#         patient.age = int(data["age"])
-#         patient.phone = data["phone"]
-#         patient.address = data["address"]
-#         patient_dao.update(patient)  # ✅ dùng DAO update
-#         return redirect(url_for("patients"))
-#     return render_template("patient/patient_edit.html", patient=patient)
+    return render_template(
+        "patient/patient_edit.html",
+        patient=patient
+    )
 
 @app.route("/patient/delete/<int:id>")
 @login_required()
 def delete_patient(id):
+    patient = patient_dao.get_by_id(id)
+    if not patient:
+        flash("Bệnh nhân không tồn tại!")
+        return redirect(url_for("patients"))
+
     patient_dao.delete(id)
+    flash("Đã xóa bệnh nhân!")
     return redirect(url_for("patients"))
 
-# CRUD DOCTOR
+
 @app.route("/doctors")
 @login_required()
 def doctors():
@@ -601,53 +603,33 @@ def doctors():
         all_doctors = doctor_dao.get_all()
     return render_template("doctor/doctors.html", doctors=all_doctors)
 
-# @app.route("/doctor/add", methods=["GET","POST"])
-# @login_required(role="admin")
-# def add_doctor():
-#     if request.method == "POST":
-#         data = request.form
-#         new_doctor = Doctor(name=data["name"], specialty=data["specialty"], phone=data["phone"])
-#         doctor_dao.add(new_doctor)
-#         return redirect(url_for("doctors"))
-#     return render_template("doctor/doctor_add.html")
-
-@app.route("/doctor/add", methods=["GET","POST"])
+@app.route("/doctor/add", methods=["GET", "POST"])
 @login_required(RoleEnum.ADMIN.value)
 def add_doctor():
     specialties = specialty_dao.get_all()
+
     if request.method == "POST":
         data = request.form
+
         new_doctor = Doctor(
-            name=data["name"],
-            specialty=int(data["specialty"]),
-            phone=data["phone"]
+            name=data.get("name"),
+            specialty_id=int(data.get("specialty_id")),  # ✅ FIX
+            phone=data.get("phone")
         )
 
         # Upload ảnh
-        file = request.files.get('image')
-        if file and file.filename != '':
+        file = request.files.get("image")
+        if file and file.filename:
             filename = secure_filename(file.filename)
-            upload_folder = os.path.join(app.static_folder, 'uploads')
-            os.makedirs(upload_folder, exist_ok=True)  # tạo folder nếu chưa có
+            upload_folder = os.path.join(app.static_folder, "uploads")
+            os.makedirs(upload_folder, exist_ok=True)
             file.save(os.path.join(upload_folder, filename))
             new_doctor.image = filename
 
         doctor_dao.add(new_doctor)
         return redirect(url_for("doctors"))
-    return render_template("doctor/doctor_add.html", specialties=specialties)
 
-# @app.route("/doctor/edit/<int:id>", methods=["GET","POST"])
-# @login_required(role="admin")
-# def edit_doctor(id):
-#     doctor = doctor_dao.get_by_id(id)
-#     if request.method == "POST":
-#         data = request.form
-#         doctor.name = data["name"]
-#         doctor.specialty = data["specialty"]
-#         doctor.phone = data["phone"]
-#         doctor_dao.update(doctor)  # ✅ dùng DAO update
-#         return redirect(url_for("doctors"))
-#     return render_template("doctor/doctor_edit.html", doctor=doctor)
+    return render_template("doctor/doctor_add.html", specialties=specialties)
 
 @app.route("/doctor/edit/<int:id>", methods=["GET","POST"])
 @login_required(RoleEnum.ADMIN.value)
@@ -676,18 +658,6 @@ def edit_doctor(id):
 def delete_doctor(id):
     doctor_dao.delete(id)
     return redirect(url_for("doctors"))
-
-# CRUD LỊCH HẸN (APPOINTMENT)
-# @app.route("/appointments")
-# @login_required()
-# def appointments():
-#     filter_by = request.args.get("filter_by")
-#     keyword = request.args.get("keyword", "").strip()
-#     if filter_by and keyword:
-#         all_appointments = appointment_dao.search(filter_by, keyword)
-#     else:
-#         all_appointments = appointment_dao.get_all()
-#     return render_template("appointment/appointments.html", appointments=all_appointments)
 
 @app.route("/appointments")
 def appointments():
@@ -721,95 +691,132 @@ def appointments():
 
     return render_template("appointment/appointments.html", appointments=appointments)
 
-
-
-@app.route("/appointment/add", methods=["GET","POST"])
+@app.route("/appointment/add", methods=["GET", "POST"])
 @login_required()
 def add_appointment():
     err = ""
     patients = patient_dao.get_all()
-    specialties = specialty_dao.get_all()
+    service_types = serviceType_dao.get_all_service_types()
+    services = []
+    doctors = []
     available_schedules = []
     datetime_obj_str = ""
-    schedule_id = None
-    specialty_name = ""
-    doctor_name = ""
+
+    # Lấy tham số từ GET (dùng để load dropdown dần dần)
+    service_type_id = request.args.get('service_type_id', type=int)
+    service_id = request.args.get('service_id', type=int)
+    doctor_id = request.args.get('doctor_id', type=int)
+    patient_id = request.args.get('patient_id', type=int)
+    appt_date = request.args.get('appointment_date')
+
     user = user_dao.get_by_id(session["user_id"])
 
-    specialty_id = request.args.get('specialty_id', type=int)
-    patient_id = request.args.get('patient_id', type=int)
-    doctor_id = request.args.get("doctor_id", type=int)
-    appt_date = request.args.get('appointment_date', type=str)
-    data = request.form
-
-
-    doctors = []
-    if specialty_id:
-        doctors = doctor_dao.get_doctors_by_specialty(specialty_id)
-        specialty_name = specialty_dao.get_name_by_id(specialty_id)
-
-    if appt_date:
-        appt_date = unquote(appt_date)
-        format = '%Y-%m-%dT%H:%M'
-        datetime_obj = datetime.strptime(appt_date, format)
-        datetime_obj_str = datetime_obj.strftime(format)
-
-        if doctor_id:
-            available_schedules = schedule_dao.get_all_available_schedules(doctor_id)
-            available_schedules = schedule_dao.get_available_schedules_by_time(
-                available_schedules,
-                datetime_obj
-            )
-            # for s in available_schedules:
-            #     print(s.id)
-            #     pass
-            if available_schedules is None:
-                err = "Giờ chọn phải nằm trong khoảng từ 9 đến 16"
-                return err
-
-        schedule_id = data.get("schedule_id")
-        if schedule_id is not None:
-            schedule_id = int(data.get("schedule_id"))
-
-    if session.get('role') != RoleEnum.PATIENT.value:
-
+    # === XỬ LÝ PATIENT_ID THEO ROLE ===
+    if session.get('role') == RoleEnum.PATIENT.value:  # Bệnh nhân chỉ đặt cho chính mình
         patient = patient_dao.get_by_user_id(user.id)
         if not patient:
-            flash("Bệnh nhân không tồn tại!")
+            flash("Bệnh nhân không tồn tại!", "danger")
             return redirect(url_for("appointments"))
         patient_id = patient.id
-    else:
-        # Nếu là nhân viên/admin, lấy từ form hoặc args
-        patient_id = request.form.get("patient_id") or patient_id
+    # else: nhân viên/admin có thể chọn bệnh nhân qua dropdown → sẽ lấy từ form khi POST
 
+    # === LOAD DỮ LIỆU THEO BƯỚC ===
+    if service_type_id:
+        services = service_dao.get_services_by_type(service_type_id)
+
+    if service_id:
+        # Có thể lọc bác sĩ theo chuyên khoa liên quan đến dịch vụ ở đây (nếu có quan hệ)
+        # Hiện tại lấy tất cả bác sĩ
+        doctors = doctor_dao.get_all()
+
+    # === XỬ LÝ NGÀY GIỜ VÀ LỊCH TRỐNG ===
+    if appt_date:
+        appt_date = unquote(appt_date)
+        try:
+            datetime_obj = datetime.strptime(appt_date, '%Y-%m-%dT%H:%M')
+            datetime_obj_str = datetime_obj.strftime('%Y-%m-%dT%H:%M')
+
+            if doctor_id:
+                all_schedules = schedule_dao.get_all_available_schedules(doctor_id)
+                available_schedules = schedule_dao.get_available_schedules_by_time(all_schedules, datetime_obj)
+                if not available_schedules:
+                    err = "Không có khung giờ trống vào thời điểm này. Vui lòng chọn giờ hoặc bác sĩ khác."
+        except ValueError:
+            err = "Định dạng ngày giờ không hợp lệ."
+
+    # === XỬ LÝ POST – ĐẶT LỊCH ===
     if request.method == "POST":
-        doctor_id = int(data.get("doctor_id"))
-        doctor_name = doctor_dao.get_by_id(doctor_id).name
-        patient_id = patient_id
+        data = request.form
+
+        # Lấy từ hidden fields (an toàn hơn args)
+        patient_id_post = data.get("patient_id")
+        service_id_post = data.get("service_id")
+        doctor_id_post = data.get("doctor_id")
         schedule_id = data.get("schedule_id")
-        description = data.get("description", "")
-        name = f'Cuộc hẹn {specialty_name} với bác sĩ {doctor_name}'
-        print(f'{patient_id}{patient_id}')
+        description = data.get("description", "").strip()
+
+        # Validate đầy đủ các trường bắt buộc
+        if not all([patient_id_post, service_id_post, doctor_id_post, schedule_id]):
+            flash("Thiếu thông tin cần thiết để đặt lịch. Vui lòng thử lại từ đầu.", "danger")
+            return redirect(url_for("add_appointment"))
+
+        try:
+            patient_id_post = int(patient_id_post)
+            service_id_post = int(service_id_post)
+            doctor_id_post = int(doctor_id_post)
+            schedule_id = int(schedule_id)
+        except ValueError:
+            flash("Dữ liệu không hợp lệ.", "danger")
+            return redirect(url_for("add_appointment"))
+
+        # Lấy object và kiểm tra tồn tại
+        service = service_dao.get_service_by_id(service_id_post)
+        doctor = doctor_dao.get_by_id(doctor_id_post)
+
+        if not service:
+            flash("Dịch vụ không tồn tại hoặc đã bị xóa.", "danger")
+            return redirect(url_for("add_appointment"))
+
+        if not doctor:
+            flash("Bác sĩ không tồn tại hoặc không khả dụng.", "danger")
+            return redirect(url_for("add_appointment"))
+
+        # Tạo tên lịch hẹn
+        name = f'Cuộc hẹn {service.name} với BS. {doctor.name}'
+
+        # Tạo appointment
         new_appointment = Appointment(
-            name=f'Cuộc hẹn {specialty_name} với bác sĩ {doctor_name}',
-            patient_id=patient_id,  # chắc chắn không None
-            schedule_id=int(schedule_id),
+            name=name,
+            patient_id=patient_id_post,
+            schedule_id=schedule_id,
             description=description
         )
-        # print(f'Appointment {new_appointment.patient_id} - {new_appointment.schedule_id} - {new_appointment.description}')
-        appointment_dao.add(new_appointment)
-        return redirect(url_for("appointments"))
-    return render_template("appointment/appointment_add.html",
-                           patients=patients,
-                           doctors=doctors,
-                           specialties=specialties,
-                           selected_doctor=doctor_id,
-                           selected_specialty=specialty_id,
-                           selected_patient=patient_id,
-                           available_schedules=available_schedules,
-                           fm_datetime=datetime_obj_str,
-                           err=err)
 
+        try:
+            appointment_dao.add(new_appointment)
+            flash("Đặt lịch hẹn thành công!", "success")
+        except Exception as e:
+            flash("Có lỗi khi lưu lịch hẹn. Vui lòng thử lại.", "danger")
+            print(e)  # Để debug, sau này thay bằng logger
+
+        return redirect(url_for("appointments"))
+
+    # === RENDER TEMPLATE (GET) ===
+    return render_template(
+        "appointment/appointment_add.html",
+        patients=patients,
+        service_types=service_types,
+        services=services,
+        doctors=doctors,
+        selected_service_type=service_type_id,
+        selected_service=service_id,
+        selected_doctor=doctor_id,
+        selected_patient=patient_id,
+        available_schedules=available_schedules,
+        fm_datetime=datetime_obj_str,
+        selected_datetime=appt_date,  # dùng cho hidden field nếu cần
+        err=err
+    )
 @app.route("/appointment/edit/<int:id>", methods=["GET","POST"])
 @login_required()
 def edit_appointment(id):
@@ -832,11 +839,10 @@ def delete_appointment(id):
     appointment_dao.delete(id)
     return redirect(url_for("appointments"))
 
-# CRUD DỊCH VỤ / LOẠI DỊCH VỤ (SERVICE / SERVICE TYPE)
 @app.route("/service-types")
 @login_required()
-def service_types():
-    return render_template("service/service_types.html", types=serviceType_dao.get_all_service_types())
+def serviceTypes():
+    return render_template("serviceTypes/serviceTypes.html", types=serviceType_dao.get_all_service_types())
 
 @app.route("/service-type/add", methods=["GET","POST"])
 @login_required(RoleEnum.ADMIN.value)
@@ -845,9 +851,34 @@ def add_service_type():
         name = request.form["name"]
         serviceType_dao.add(name)
         flash("Thêm loại dịch vụ thành công!")
-        return redirect(url_for("service_types"))
-    return render_template("service/service_type_add.html")
+        return redirect(url_for("serviceTypes"))
+    return render_template("serviceTypes/serviceType_add.html")
 
+@app.route("/service-type/edit/<int:id>", methods=["GET", "POST"])
+@login_required(RoleEnum.ADMIN.value)
+def edit_service_type(id):
+    service_type = serviceType_dao.get_by_id(id)
+    if not service_type:
+        flash("Loại dịch vụ không tồn tại hoặc đã bị xóa!", "danger")
+        return redirect(url_for("serviceTypes"))
+
+    if request.method == "POST":
+        new_name = request.form["name"].strip()
+        if not new_name:
+            flash("Tên loại dịch vụ không được để trống!", "danger")
+        else:
+            service_type.name = new_name
+            serviceType_dao.update(service_type)
+            flash("Cập nhật loại dịch vụ thành công!", "success")
+            return redirect(url_for("serviceTypes"))
+
+    return render_template("serviceTypes/serviceType_edit.html", type=service_type)
+
+@app.route("/service-type/delete/<int:id>")
+@login_required(RoleEnum.ADMIN.value)
+def delete_service_type(id):
+    serviceType_dao.soft_delete(id)  # DAO tự flash thông báo chi tiết
+    return redirect(url_for("serviceTypes"))
 @app.route("/services")
 @login_required()
 def services():
@@ -891,25 +922,21 @@ def edit_service(id):
 @app.route("/service/delete/<int:id>")
 @login_required(RoleEnum.ADMIN.value)
 def delete_service(id):
-    db = get_connection()
-    cursor = db.cursor()
-    cursor.execute("DELETE FROM services WHERE id=%s", (id,))
-    db.commit()
-    cursor.close()
-    db.close()
-    flash("Xóa dịch vụ thành công!")
+    if service_dao.soft_delete(id):
+        flash("Xóa dịch vụ thành công! (Đã ẩn khỏi danh sách)", "success")
+    else:
+        flash("Không tìm thấy dịch vụ hoặc đã bị xóa trước đó!", "danger")
     return redirect(url_for("services"))
 
-# CRUD THUỐC / LOẠI THUỐC (MEDICINE / MEDICINE TYPE)
 @app.route("/medicineTypes")
 @login_required()
-def medicine_types():
-    keyword = request.args.get("keyword", "").strip().lower()
-    types = medicineType_dao.get_all_medicine_types()
+def medicineTypes():
+    keyword = request.args.get("keyword", "").strip()
     if keyword:
-        types = [t for t in types if keyword in t.name.lower()]
+        types = medicineType_dao.search(keyword)
+    else:
+        types = medicineType_dao.get_all_medicine_types()
     return render_template("medicineType/medicineTypes.html", types=types)
-
 
 @app.route("/medicineType/add", methods=["GET","POST"])
 @login_required(RoleEnum.ADMIN.value)
@@ -918,7 +945,7 @@ def add_medicine_type():
         name = request.form["name"]
         medicineType_dao.add_medicine_type(name)
         flash("Thêm loại thuốc thành công!")
-        return redirect(url_for("medicine_types"))
+        return redirect(url_for("medicineTypes"))
     return render_template("medicineType/medicineType_add.html")
 
 @app.route("/medicine-type/edit/<int:id>", methods=["GET", "POST"])
@@ -928,24 +955,22 @@ def edit_medicine_type(id):
 
     if not type_to_edit:
         flash("Loại thuốc không tồn tại!")
-        return redirect(url_for("medicine_types"))
+        return redirect(url_for("medicineTypes"))
 
     if request.method == "POST":
         new_name = request.form.get("name")
         type_to_edit.name = new_name
         medicineType_dao.update(type_to_edit)
         flash("Cập nhật loại thuốc thành công!")
-        return redirect(url_for("medicine_types"))
+        return redirect(url_for("medicineTypes"))
 
     return render_template("medicineType/medicineType_edit.html", type_obj=type_to_edit)
 
 @app.route("/medicine-type/delete/<int:id>")
 @login_required(RoleEnum.ADMIN.value)
 def delete_medicine_type(id):
-    # Gọi DAO để xóa
-    success = medicineType_dao.delete(id)
-
-    return redirect(url_for("medicine_types"))
+    medicineType_dao.soft_delete(id)  # giờ flash đã được xử lý trong DAO
+    return redirect(url_for("medicineTypes"))
 
 @app.route("/medicines")
 @login_required()
@@ -968,7 +993,6 @@ def add_medicine():
         return redirect(url_for("medicines"))
     return render_template("medicine/medicine_add.html", types=types)
 
-# CRUD THUỐC / LOẠI THUỐC (MEDICINE / MEDICINE TYPE)
 @app.route("/medicine/edit/<int:id>", methods=["GET","POST"])
 @login_required(RoleEnum.ADMIN.value)
 def edit_medicine(id):
@@ -990,16 +1014,11 @@ def edit_medicine(id):
 @app.route("/medicine/delete/<int:id>")
 @login_required(RoleEnum.ADMIN.value)
 def delete_medicine(id):
-    db = get_connection()
-    cursor = db.cursor()
-    cursor.execute("DELETE FROM medicines WHERE id=%s", (id,))
-    db.commit()
-    cursor.close()
-    db.close()
-    flash("Xóa thuốc thành công!")
+    if medicine_dao.soft_delete(id):
+        flash("Xóa thuốc thành công! (Đã ẩn khỏi danh sách)", "success")
+    else:
+        flash("Không tìm thấy thuốc hoặc đã bị xóa trước đó!", "danger")
     return redirect(url_for("medicines"))
-
-# CRUD HÓA ĐƠN / THANH TOÁN (BILLS / PAYMENT)
 @app.route("/bills")
 @login_required()
 def bills():

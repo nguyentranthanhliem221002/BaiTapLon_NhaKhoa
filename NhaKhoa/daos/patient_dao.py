@@ -7,28 +7,45 @@ import bcrypt
 class PatientDAO:
     def get_all(self):
         with get_session() as session:
-            return session.query(Patient).all()
+            return session.query(Patient) \
+                .filter(Patient.status == 0) \
+                .all()
+
 
     def get_by_id(self, id: int):
         with get_session() as session:
-            return session.get(Patient, id)
+            return session.query(Patient) \
+                .filter(
+                Patient.id == id,
+                Patient.status == 0
+            ).first()
 
     def add(self, patient: Patient):
         with get_session() as session:
+            # 1. Thêm patient trước
             session.add(patient)
             session.commit()
 
+            # 2. Tạo user cho patient
             username = patient.phone
             raw_password = "1"
-            hashed_password = bcrypt.hashpw(raw_password.encode(), bcrypt.gensalt()).decode()
+            hashed_password = bcrypt.hashpw(
+                raw_password.encode(),
+                bcrypt.gensalt()
+            ).decode()
 
-            user = User(name=username, password=hashed_password, email="", role_id=RoleEnum.PATIENT.value)
+            user = User(
+                name=username,
+                password=hashed_password,
+                email="",
+                role_id=RoleEnum.PATIENT.value
+            )
+
             session.add(user)
             session.commit()
 
-            # Gán user_id cho Patient
-            patient.user_id = user.role_id
-            session.add(patient)
+            # 3. Gán user_id đúng
+            patient.user_id = user.id
             session.commit()
 
     def update(self, patient: Patient):
@@ -39,13 +56,17 @@ class PatientDAO:
     def delete(self, id: int):
         with get_session() as session:
             patient = session.get(Patient, id)
-            if patient:
-                session.delete(patient)
-                session.commit()
+            if not patient:
+                return
+
+            patient.status = -1
+            session.commit()
 
     def search(self, filter_by: str, keyword: str):
         with get_session() as session:
-            query = session.query(Patient)
+            query = session.query(Patient) \
+                .filter(Patient.status == 0)
+
             if filter_by == "name":
                 query = query.filter(Patient.name.ilike(f"%{keyword}%"))
             elif filter_by == "age":
@@ -57,6 +78,12 @@ class PatientDAO:
             elif filter_by == "phone":
                 query = query.filter(Patient.phone.ilike(f"%{keyword}%"))
             return query.all()
+
     def get_by_user_id(self, user_id: int):
         with get_session() as session:
-            return session.query(Patient).filter(Patient.user_id == user_id).first()
+            return session.query(Patient) \
+                .filter(
+                Patient.user_id == user_id,
+                Patient.status == 0
+            ).first()
+

@@ -53,11 +53,17 @@ from datetime import datetime
 class DoctorDAO:
     def get_all(self):
         with get_session() as session:
-            return session.query(Doctor).all()
+            return session.query(Doctor) \
+                .filter(Doctor.status == 0) \
+                .all()
 
     def get_by_id(self, id: int):
         with get_session() as session:
-            return session.get(Doctor, id)
+            return session.query(Doctor) \
+                .filter(
+                Doctor.id == id,
+                Doctor.status == 0
+            ).first()
 
     def add(self, doctor: Doctor):
         with get_session() as session:
@@ -82,24 +88,34 @@ class DoctorDAO:
     def delete(self, id: int):
         with get_session() as session:
             doctor = session.get(Doctor, id)
-            if doctor:
-                session.delete(doctor)
-                session.commit()
+            if not doctor:
+                return
+
+            doctor.status = -1
+            session.commit()
 
     def search(self, filter_by: str, keyword: str):
         with get_session() as session:
-            query = session.query(Doctor)
+            query = session.query(Doctor) \
+                .filter(Doctor.status == 0)
+
             if filter_by == "name":
                 query = query.filter(Doctor.name.ilike(f"%{keyword}%"))
             elif filter_by == "specialty":
-                query = query.filter(Doctor.specialty.ilike(f"%{keyword}%"))
+                query = query.join(Doctor.specialty) \
+                    .filter(Specialty.name.ilike(f"%{keyword}%"))
             elif filter_by == "phone":
                 query = query.filter(Doctor.phone.ilike(f"%{keyword}%"))
+
             return query.all()
 
     def get_doctors_by_specialty(self, specialty_id: int):
-        """Get all doctors with the given specialty_id."""
         with get_session() as session:
-            return session.query(Doctor).filter(Doctor.specialty_id == specialty_id).all()
+            return session.query(Doctor) \
+                .filter(
+                Doctor.specialty_id == specialty_id,
+                Doctor.status == 0
+            ).all()
+
 
 

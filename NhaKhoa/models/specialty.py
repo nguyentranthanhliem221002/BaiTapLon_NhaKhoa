@@ -1,14 +1,17 @@
-from sqlalchemy import Column, Integer, ForeignKey, String
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-
-from NhaKhoa.models.base import Base
-
+from NhaKhoa.models.base import Base  # giả sử bạn dùng Base từ đây
 
 class Specialty(Base):
-    __tablename__ = "specialties"
-    __table_args__ = {"extend_existing": True}
+    __tablename__ = "specialty"
 
-    name = Column(String(100), nullable=False)
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False, unique=True)
     description = Column(String(255), default="")
 
     doctors = relationship("Doctor", back_populates="specialty")
+
+    service_types = relationship("ServiceType", back_populates="specialty")
+
+    def __repr__(self):
+        return f"<Specialty {self.name}>"
