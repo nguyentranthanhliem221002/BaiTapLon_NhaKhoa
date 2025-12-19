@@ -72,13 +72,13 @@ def init_database():
 
         # --- Statuses --- (NEW SECTION)
         if db.scalar(select(func.count()).select_from(Status)) == 0:
-            db.add_all([
-                Status(name="Chưa thanh toán", description="Hóa đơn chưa được thanh toán"),
-                Status(name="Đã thanh toán", description="Hóa đơn đã được thanh toán"),
-                Status(name="Đã hủy", description="Hóa đơn đã bị hủy"),
-                Status(name="Đang xử lý", description="Hóa đơn đang được xử lý"),
-                Status(name="Hoàn thành", description="Hóa đơn đã hoàn thành")
-            ])
+            statuses = []
+            from NhaKhoa.models.status import StatusEnum
+            for status in StatusEnum:
+                status = Status(name=status.value, description=f"Trạng thái: {status.value}")
+                statuses.append(status)
+
+            db.add_all(statuses)
             db.commit()
         # --- Users ---
         if db.scalar(select(func.count()).select_from(User)) == 0: #this line error

@@ -9,7 +9,6 @@ class Bill(Base):
     __tablename__ = "bills"
     __table_args__ = {"extend_existing": True}
 
-    name = Column(String(100), nullable=False)
     appointment_id = Column(Integer, ForeignKey("appointments.id"), nullable=False)
     total = Column(Float, default=0)
     status_id = Column(Integer, ForeignKey("statuses.id"), nullable=False)

@@ -31,7 +31,6 @@
             <th>Mô tả</th>
             <th>Số tiền</th>
             <th>Trạng thái</th>
-            <th>Phương thức</th>
             <th>Thao tác</th>
         </tr>
     </thead>
@@ -39,14 +38,19 @@
         {% for bill in bills %}
         <tr>
             <td>{{ bill.id }}</td>
-            <td>{{ bill.patient_name }}</td>
-            <td>{{ bill.doctor_name }}</td>
-            <td>{{ bill.description or "" }}</td>
-            <td>{{ "{:,.0f}".format(bill.amount) }} đ</td>
-            <td>{{ bill.status }}</td>
-            <td>{{ bill.payment_method or "" }}</td>
+            <td>{{ bill.appointment.patient.name if bill.appointment and bill.appointment.patient else '' }}</td>
             <td>
-                {% if bill.status != "Đã thanh toán" %}
+                {% if bill.appointment and bill.appointment.schedule and bill.appointment.schedule.doctor %}
+                    {{ bill.appointment.schedule.doctor.name }}
+                {% else %}
+                    {{ '' }}
+                {% endif %}
+            </td>
+            <td>{{ bill.description or "" }}</td>
+            <td>{{ "{:,.0f}".format(bill.total) }} đ</td>
+            <td>{{ bill.status.name if bill.status else '' }}</td>
+            <td>
+                {% if bill.status.name != "Đã thanh toán" %}
                 <a class="btn btn-success btn-sm" href="{{ url_for('pay_bill', id=bill.id) }}">Thanh toán</a>
                 {% endif %}
             </td>
