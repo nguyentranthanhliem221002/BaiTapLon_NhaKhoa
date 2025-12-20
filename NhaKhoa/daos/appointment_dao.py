@@ -15,12 +15,18 @@ class AppointmentDAO:
 
     def get_all(self):
         with get_session() as session:
-            return session.query(Appointment) \
-                .options(joinedload(Appointment.patient), joinedload(Appointment.schedule)) \
+            return session.query(Bill) \
+                .options(
+                joinedload(Bill.status),
+                joinedload(Bill.appointment, innerjoin=True)
+                .joinedload(Appointment.patient, innerjoin=True),
+                joinedload(Bill.appointment, innerjoin=True)
+                .joinedload(Appointment.schedule, innerjoin=True)
+                .joinedload(Schedule.doctor, innerjoin=True)
+            ) \
                 .all()
 
     def get_all_with_details(self):
-        """Returns all appointments with patient, schedule, and doctor details preloaded."""
         with get_session() as session:
             return session.query(Appointment) \
                 .options(
@@ -29,17 +35,42 @@ class AppointmentDAO:
             ) \
                 .all()
 
+    # def get_all_with_doctor_names(self):
+    #     """Returns Appointment objects with all relationships preloaded."""
+    #     with get_session() as session:
+    #         pass
+    #     return session.query(Appointment) \
+    #         .options(
+    #         joinedload(Appointment.patient),  # Load patient
+    #         joinedload(Appointment.schedule)  # Load schedule
+    #         .joinedload(Schedule.doctor)  # Load doctor through schedule
+    #     ) \
+    #         .all()
     def get_all_with_doctor_names(self):
-        """Returns Appointment objects with all relationships preloaded."""
         with get_session() as session:
-            pass
-        return session.query(Appointment) \
-            .options(
-            joinedload(Appointment.patient),  # Load patient
-            joinedload(Appointment.schedule)  # Load schedule
-            .joinedload(Schedule.doctor)  # Load doctor through schedule
-        ) \
-            .all()
+            return session.query(Appointment) \
+                .options(
+                joinedload(Appointment.patient),
+                joinedload(Appointment.schedule)
+                .joinedload(Schedule.doctor)
+            ) \
+                .filter(Appointment.active == 1) \
+                .all()
+
+    def get_by_doctor_id(self, doctor_id: int):
+        with get_session() as session:
+            return session.query(Appointment) \
+                .join(Appointment.schedule) \
+                .options(
+                joinedload(Appointment.patient),
+                joinedload(Appointment.schedule)
+                .joinedload(Schedule.doctor)
+            ) \
+                .filter(
+                Schedule.doctor_id == doctor_id,
+                Appointment.active == 1
+            ) \
+                .all()
 
     def get_by_id(self, id: int):
         with get_session() as session:
@@ -60,19 +91,30 @@ class AppointmentDAO:
         with get_session() as session:
             session.merge(appointment)
             session.commit()
+
     def get_by_patient_id(self, patient_id: int):
-        with (get_session() as session):
+        with get_session() as session:
             return session.query(Appointment) \
-                .options(joinedload(Appointment.patient), joinedload(Appointment.schedule)
-                .joinedload(Schedule.doctor)) \
-                .filter(Appointment.patient_id == patient_id).all()
+                .options(
+                joinedload(Appointment.patient),
+                joinedload(Appointment.schedule).joinedload(Schedule.doctor),
+                joinedload(Appointment.bill)  # ← QUAN TRỌNG: Preload bill để dùng appt.bill an toàn
+            ) \
+                .filter(
+                Appointment.patient_id == patient_id,
+                Appointment.active == 1
+            ) \
+                .all()
+
+
     def delete(self, id: int):
         with get_session() as session:
             appt = session.get(Appointment, id)
-            if appt:
-                session.delete(appt)
-                session.commit()
+            if not appt:
+                return
 
+            appt.active = 0
+            session.commit()
     def search(self, filter_by: str, keyword: str):
         with get_session() as session:
             query = session.query(Appointment).options(
@@ -83,11 +125,12 @@ class AppointmentDAO:
             if filter_by == "patient":
                 query = query.join(Appointment.patient).filter(Patient.name.ilike(f"%{keyword}%"))
             elif filter_by == "doctor":
-                query = query.join(Appointment.doctor).filter(Doctor.name.ilike(f"%{keyword}%"))
+                query = query.join(Appointment.schedule) \
+                    .join(Schedule.doctor) \
+                    .filter(Doctor.name.ilike(f"%{keyword}%"))
+
             elif filter_by == "schedule":
-                # Assuming you want to search by schedule details (e.g., doctor name or time)
-                # You may need to join Schedule and Doctor tables if needed
-                pass  # Implement as needed
+                pass
             elif filter_by == "date":
                 try:
                     dt = datetime.strptime(keyword, "%Y-%m-%d").date()
@@ -95,6 +138,7 @@ class AppointmentDAO:
                 except ValueError:
                     return []
             return query.all()
+
     def exists_by_patient_and_schedule(self, patient_id: int, schedule_id: int):
         with get_session() as session:
             return session.query(Appointment).filter(

@@ -105,7 +105,7 @@ def init_database():
             select(func.count(User.id))
             .where(User.role_id == RoleEnum.ADMIN.value)
         ) == 0:
-            hashed = bcrypt.hashpw("admin123".encode(), bcrypt.gensalt()).decode()
+            hashed = bcrypt.hashpw("1".encode(), bcrypt.gensalt()).decode()
             db.add(User(
                 name="Admin",
                 email="admin@example.com",
@@ -141,7 +141,7 @@ def init_database():
             ]
 
             for name, email, phone, specialty_id in doctors:
-                hashed = bcrypt.hashpw("123456".encode(), bcrypt.gensalt()).decode()
+                hashed = bcrypt.hashpw("1".encode(), bcrypt.gensalt()).decode()
 
                 user = User(
                     name=name,
@@ -166,13 +166,11 @@ def init_database():
         # =====================
         if db.scalar(select(func.count(Patient.id))) == 0:
             patients = [
-                ("patient1", 28, "0903765432", "Hà Nội", "patient1@example.com"),
-                ("patient2", 34, "0933876543", "Đà Nẵng", "patient2@example.com"),
-                ("patient3", 22, "0977123456", "TP.HCM", "patient3@example.com"),
+                ("patient", 28, "0903765432", "Hà Nội", "patient1@example.com"),
             ]
 
             for name, age, phone, address, email in patients:
-                hashed = bcrypt.hashpw("123456".encode(), bcrypt.gensalt()).decode()
+                hashed = bcrypt.hashpw("1".encode(), bcrypt.gensalt()).decode()
 
                 user = User(
                     name=name,
@@ -183,15 +181,13 @@ def init_database():
                 db.add(user)
                 db.flush()
 
-                db.add(Patient(
-                    name=name,
-                    age=age,
-                    phone=phone,
-                    address=address,
-                    user_id=user.id
-                ))
-
-            db.commit()
+                # db.add(Patient(
+                #     name=name,
+                #     age=age,
+                #     phone=phone,
+                #     address=address,
+                #     user_id=user.id
+                # ))
 
         # =====================
         # SERVICE TYPES

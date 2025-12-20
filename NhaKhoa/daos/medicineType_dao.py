@@ -8,14 +8,13 @@ class MedicineTypeDAO:
     def get_all_medicine_types(self):
         with get_session() as session:
             return session.query(MedicineType) \
-                .filter(MedicineType.status == 0) \
+                .filter(MedicineType.active == True) \
                 .all()
 
-    # Lấy theo ID (chỉ lấy nếu status == 0)
     def get_by_id(self, id: int):
         with get_session() as session:
             return session.query(MedicineType) \
-                .filter(MedicineType.id == id, MedicineType.status == 0) \
+                .filter(MedicineType.id == id, MedicineType.active == True) \
                 .first()
 
     # Thêm loại thuốc mới
@@ -36,7 +35,7 @@ class MedicineTypeDAO:
         with get_session() as session:
             has_medicine = session.query(Medicine).filter(
                 Medicine.medicine_type_id == id,
-                Medicine.status == 0
+                Medicine.active == True
             ).first()
 
             if has_medicine:
@@ -44,8 +43,8 @@ class MedicineTypeDAO:
                 return False
 
             type_obj = session.query(MedicineType).filter(MedicineType.id == id).first()
-            if type_obj and type_obj.status == 0:
-                type_obj.status = -1
+            if type_obj and type_obj.active == True:
+                type_obj.active = False
                 session.commit()
                 flash("Xóa loại thuốc thành công! (Đã ẩn khỏi hệ thống)", "success")
                 return True

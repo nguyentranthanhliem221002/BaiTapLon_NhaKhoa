@@ -5,8 +5,10 @@
     <h2 class="mb-4">Thêm lịch hẹn mới</h2>
 
     <form method="GET" action="{{ url_for('add_appointment') }}">
-        <!-- Chọn bệnh nhân (chỉ hiển thị cho nhân viên/admin) -->
-        <div class="mb-3" {% if session.get('role') == RoleEnum.PATIENT.value %}style="display: none;"{% endif %}>
+
+                    {% if session.get("role") == RoleEnum.PATIENT.value %}
+                    <!-- Chọn bệnh nhân (chỉ hiển thị cho nhân viên/admin) -->
+        <div class="mb-3" >
             <label for="patient_id" class="form-label">Bệnh nhân</label>
             <select class="form-select" id="patient_id" name="patient_id" required>
                 <option value="" disabled {% if not selected_patient %}selected{% endif %}>Chọn bệnh nhân</option>
@@ -15,6 +17,7 @@
                 {% endfor %}
             </select>
         </div>
+                    {% endif %}
 
         <!-- Chọn loại dịch vụ -->
         <div class="mb-3">

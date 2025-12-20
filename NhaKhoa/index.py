@@ -5,6 +5,7 @@ from urllib.parse import unquote
 from flask import Flask, render_template, redirect, request, session, url_for, flash
 from functools import wraps
 import bcrypt
+import requests, json, uuid, hashlib, hmac
 import secrets
 from datetime import datetime, timedelta
 import requests
@@ -36,6 +37,12 @@ from NhaKhoa.models.patient import Patient
 from NhaKhoa.models.doctor import Doctor
 from NhaKhoa.models.appointment import Appointment
 
+MOMO_PARTNER_CODE = "MOMO5RGX20191128"       # Partner code của bạn
+MOMO_ACCESS_KEY = "M8brj9K6E22vXoDB"   # Access key
+MOMO_SECRET_KEY = "nqQiVSgDMy809JoPF6OzP5OdBUB550Y4"   # Secret key
+MOMO_ENDPOINT = "https://test-payment.momo.vn/v2/gateway/api/create"
+MOMO_RETURN_URL = "http://127.0.0.1:5000/bill/momo_return"
+MOMO_NOTIFY_URL = "http://127.0.0.1:5000/bill/momo_notify"
 
 # CONFIG FLASK-MAIL
 app.config.update(
@@ -101,7 +108,7 @@ def search():
     query = request.args.get("q", "")
     return f"Bạn đã tìm: {query}"
 
-# ACCOUNT: REGISTER / LOGIN / LOGOUT
+
 @app.route("/account/register", methods=["GET","POST"])
 def register():
     if request.method == "POST":
@@ -130,6 +137,7 @@ def register():
         return redirect(url_for("login"))
 
     return render_template("account/register.html")
+
 
 @app.route("/account/login", methods=["GET","POST"])
 def login():
@@ -319,43 +327,6 @@ def patient_doctors():
 
     return render_template("patient/patient_doctors.html", doctors=doctors)
 
-# @app.route('/appointments/create', methods=['POST'])
-# @login_required()
-# def create_appointment():
-#     data = request.get_json()
-#
-#     user = user_dao.get_by_id(session["user_id"])
-#     patient = patient_dao.get_by_user_id(user.id)
-#
-#     schedule_id = int(data.get("schedule_id"))
-#     schedule = schedule_dao.get_by_id(schedule_id)
-#
-#     if not schedule:
-#         return jsonify(success=False, message="Khung giờ không tồn tại")
-#
-#     if schedule.num_patient >= schedule.max_patient:
-#         return jsonify(success=False, message="Khung giờ đã đầy")
-#
-#     # ✅ tăng slot
-#     schedule.num_patient += 1
-#     schedule_dao.update(schedule)
-#
-#     appointment = Appointment(
-#         patient_id=patient.id,
-#         schedule_id=schedule.id,
-#         description=data.get("description", ""),
-#         name=f"Lịch khám với BS. {schedule.doctor.name}"
-#     )
-#
-#     appointment_dao.add(appointment)
-#
-#     return jsonify({
-#         "success": True,
-#         "appointment_id": appointment.id,
-#         "doctor_name": schedule.doctor.name,
-#         "start_time": schedule.from_date.isoformat()
-#     })
-
 @app.route('/appointments/create', methods=['POST'])
 @login_required()
 def create_appointment():
@@ -370,14 +341,12 @@ def create_appointment():
     if not schedule:
         return jsonify(success=False, message="Khung giờ không tồn tại")
 
-    # ❌ CHECK TRÙNG LỊCH
     if appointment_dao.exists_by_patient_and_schedule(patient.id, schedule_id):
         return jsonify(
             success=False,
             message="Bạn đã có lịch hẹn ở khung giờ này rồi!"
         )
 
-    # ❌ CHECK FULL SLOT
     if schedule.num_patient >= schedule.max_patient:
         return jsonify(success=False, message="Khung giờ đã đầy")
 
@@ -391,7 +360,6 @@ def create_appointment():
         description=data.get("description", ""),
         name=f"Lịch khám với BS. {schedule.doctor.name}"
     )
-
     appointment_dao.add(appointment)
 
     return jsonify({
@@ -409,13 +377,12 @@ def cancel_appointment(id):
     appointment = appointment_dao.get_by_id(id)
 
     if not appointment or appointment.patient_id != patient.id:
-        return jsonify({"success": False, "message": "Không tìm thấy lịch hẹn hoặc không có quyền!"})
+        return jsonify({"success": False, "message": "Không có quyền hủy lịch!"})
 
-    # Cập nhật trạng thái cancel
-    appointment.active = 0
-    appointment_dao.update(appointment)
-
-    return jsonify({"success": True, "message": "Hủy lịch hẹn thành công!"})
+    if appointment_dao.cancel(id):
+        return jsonify({"success": True, "message": "Hủy lịch hẹn thành công! Lịch đã được ẩn."})
+    else:
+        return jsonify({"success": False, "message": "Lịch đã hủy trước đó hoặc lỗi hệ thống."})
 
 @app.route("/appointments/events")
 @login_required(RoleEnum.USER.value)
@@ -439,22 +406,54 @@ def appointments_events():
         })
 
     return jsonify(events)
+#
+# @app.route("/my_appointments")
+# @login_required(RoleEnum.USER.value, RoleEnum.PATIENT.value)
+# def my_appointments():
+#     user = user_dao.get_by_id(session.get("user_id"))
+#     patient = patient_dao.get_by_user_id(user.id)
+#     if not patient:
+#         flash("Bệnh nhân không tồn tại!", "danger")
+#         return redirect(url_for("dashboard"))
+#
+#     service_types = serviceType_dao.get_all_service_types()
+#
+#     appointments = appointment_dao.get_by_patient_id(patient.id)
+#
+#     events = []
+#     for appt in appointments:
+#         doctor_name = appt.schedule.doctor.name if appt.schedule and appt.schedule.doctor else "Chưa xác định"
+#         events.append({
+#             "id": appt.id,
+#             "title": doctor_name,
+#             "start": appt.schedule.from_date.isoformat() if appt.schedule else "",
+#             "extendedProps": {
+#                 "description": appt.description or "Không có mô tả"
+#             }
+#         })
+#
+#     return render_template(
+#         "patient/patient_appointments.html",
+#         events=events,
+#         service_types=service_types,
+#         patient_id=patient.id
+#     )
 
 @app.route("/my_appointments")
 @login_required(RoleEnum.USER.value, RoleEnum.PATIENT.value)
 def my_appointments():
     user = user_dao.get_by_id(session.get("user_id"))
+    if not user:
+        flash("Vui lòng đăng nhập lại!", "danger")
+        return redirect(url_for("login"))
+
     patient = patient_dao.get_by_user_id(user.id)
     if not patient:
         flash("Bệnh nhân không tồn tại!", "danger")
         return redirect(url_for("dashboard"))
 
-    # Lấy tất cả dữ liệu cần thiết cho form đặt lịch
     service_types = serviceType_dao.get_all_service_types()
-    services = service_dao.get_all_services()  # sẽ lọc bằng JS nếu cần
-    doctors = doctor_dao.get_all()
 
-    # Lấy appointments để hiển thị trên lịch
     appointments = appointment_dao.get_by_patient_id(patient.id)
 
     events = []
@@ -469,13 +468,21 @@ def my_appointments():
             }
         })
 
+    # Xác định role hiện tại
+    current_role_name = "USER" if user.role_id == RoleEnum.USER.value else "PATIENT"
+
+    # Chỉ khi là PATIENT mới lấy danh sách tất cả bệnh nhân để chọn
+    all_patients = []
+    if current_role_name == "PATIENT":
+        all_patients = patient_dao.get_all()  # <-- Lấy hết bệnh nhân active
+
     return render_template(
         "patient/patient_appointments.html",
         events=events,
         service_types=service_types,
-        services=services,
-        doctors=doctors,
-        patient_id=patient.id
+        patient_id=patient.id,           # patient mặc định của user hiện tại
+        current_role=current_role_name,
+        all_patients=all_patients        # <-- Truyền danh sách bệnh nhân vào template
     )
 @app.route("/api/services_by_type/<int:type_id>")
 def api_services_by_type(type_id):
@@ -514,11 +521,13 @@ def api_available_schedules():
     except Exception as e:
         print("Lỗi load lịch:", e)
         return jsonify([])
+
 @app.route("/doctors/by-service/<int:service_id>")
 def doctors_by_service(service_id):
     doctors = doctor_dao.get_doctors_by_specialty(service_id)  # hoặc service_id nếu mapping đúng
     result = [{"id": d.id, "name": d.name} for d in doctors]
     return jsonify(result)
+
 @app.route("/api/doctors_by_service_type/<int:service_type_id>")
 def api_doctors_by_service_type(service_type_id):
     service_type = serviceType_dao.get_by_id(service_type_id)
@@ -543,7 +552,6 @@ def add_appointment_ajax():
     appointment_dao.add(new_appointment)
     doctor = doctor_dao.get_by_id(new_appointment.doctor_id)
     return {"success": True, "id": new_appointment.id, "doctor_name": doctor.name}
-
 
 @app.route("/patient/edit/<int:id>", methods=["GET", "POST"])
 @login_required()
@@ -591,18 +599,33 @@ def delete_patient(id):
     flash("Đã xóa bệnh nhân!")
     return redirect(url_for("patients"))
 
-
 @app.route("/doctors")
-@login_required()
+@login_required(RoleEnum.ADMIN.value)  # Giả sử chỉ admin xem danh sách bác sĩ
 def doctors():
     filter_by = request.args.get("filter_by")
-    keyword = request.args.get("keyword", "").strip()
+    keyword = request.args.get("keyword", "").strip().lower()
+
     if filter_by and keyword:
         all_doctors = doctor_dao.search(filter_by, keyword)
     else:
-        all_doctors = doctor_dao.get_all()
-    return render_template("doctor/doctors.html", doctors=all_doctors)
+        all_doctors = doctor_dao.get_all()  # hoặc get_all_active() nếu có
 
+    # Tạo list doctors với thêm tên chuyên khoa
+    doctors_with_specialty = []
+    for doc in all_doctors:
+        specialty_name = specialty_dao.get_name_by_id(doc.specialty_id) or "Chưa xác định"
+        doctors_with_specialty.append({
+            "id": doc.id,
+            "name": doc.name,
+            "specialty_name": specialty_name,
+            "phone": doc.phone,
+            "image": doc.image
+        })
+
+    return render_template(
+        "doctor/doctors.html",
+        doctors=doctors_with_specialty
+    )
 @app.route("/doctor/add", methods=["GET", "POST"])
 @login_required(RoleEnum.ADMIN.value)
 def add_doctor():
@@ -631,27 +654,47 @@ def add_doctor():
 
     return render_template("doctor/doctor_add.html", specialties=specialties)
 
-@app.route("/doctor/edit/<int:id>", methods=["GET","POST"])
+@app.route("/doctor/edit/<int:id>", methods=["GET", "POST"])
 @login_required(RoleEnum.ADMIN.value)
 def edit_doctor(id):
     doctor = doctor_dao.get_by_id(id)
-    specialty_name = specialty_dao.get_name_by_id(doctor.specialty_id)
+    if not doctor:
+        flash("Bác sĩ không tồn tại!", "danger")
+        return redirect(url_for("doctors"))
+
     if request.method == "POST":
         data = request.form
+
         doctor.name = data["name"]
-        doctor.specialty = data["specialty"]
         doctor.phone = data["phone"]
+
+        # Lấy specialty_id từ form (là ID số)
+        try:
+            specialty_id = int(data["specialty"])
+            doctor.specialty_id = specialty_id
+        except (ValueError, KeyError):
+            flash("Vui lòng chọn chuyên khoa hợp lệ!", "danger")
+            return redirect(url_for("edit_doctor", id=id))
 
         # Upload ảnh
         file = request.files.get('image')
-        if file and file.filename != '':
+        if file and file.filename:
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.static_folder, 'uploads', filename))
+            upload_path = os.path.join(app.static_folder, 'uploads', filename)
+            file.save(upload_path)
             doctor.image = filename
 
         doctor_dao.update(doctor)
+        flash("Cập nhật thông tin bác sĩ thành công!", "success")
         return redirect(url_for("doctors"))
-    return render_template("doctor/doctor_edit.html", doctor=doctor, specialty_name=specialty_name)
+
+    # GET: hiển thị form
+    specialties = specialty_dao.get_all()  # Lấy danh sách chuyên khoa
+    return render_template(
+        "doctor/doctor_edit.html",
+        doctor=doctor,
+        specialties=specialties
+    )
 
 @app.route("/doctor/delete/<int:id>")
 @login_required(RoleEnum.ADMIN.value)
@@ -659,37 +702,70 @@ def delete_doctor(id):
     doctor_dao.delete(id)
     return redirect(url_for("doctors"))
 
+# @app.route("/appointments")
+# def appointments():
+#     filter_by = request.args.get('filter_by')
+#     keyword = request.args.get('keyword', '').lower()
+#
+#     # Get appointments with all relationships preloaded
+#     appointments = appointment_dao.get_all_with_doctor_names()
+#
+#     # Apply filtering if needed
+#     if filter_by and keyword:
+#         if filter_by == 'patient':
+#             appointments = [
+#                 a for a in appointments
+#                 if a.patient and keyword in a.patient.name.lower()
+#             ]
+#         elif filter_by == 'doctor':
+#             appointments = [
+#                 a for a in appointments
+#                 if a.schedule and a.schedule.doctor and keyword in a.schedule.doctor.name.lower()
+#             ]
+#         elif filter_by == 'date':
+#             try:
+#                 filter_date = datetime.strptime(keyword, '%Y-%m-%d').date()
+#                 appointments = [
+#                     a for a in appointments
+#                     if a.schedule and a.schedule.from_date.date() == filter_date
+#                 ]
+#             except ValueError:
+#                 pass  # Ignore invalid date format
+#
+#     return render_template("appointment/appointments.html", appointments=appointments)
+
 @app.route("/appointments")
 def appointments():
     filter_by = request.args.get('filter_by')
     keyword = request.args.get('keyword', '').lower()
 
-    # Get appointments with all relationships preloaded
-    appointments = appointment_dao.get_all_with_doctor_names()
+    role = session.get("role")
 
-    # Apply filtering if needed
+    if role == RoleEnum.ADMIN.value:
+        appointments = appointment_dao.get_all_with_doctor_names()
+
+    elif role == RoleEnum.DOCTOR.value:
+        user_id = session.get("user_id")
+        doctor = doctor_dao.get_by_user_id(user_id)
+        if not doctor:
+            appointments = []
+        else:
+            appointments = appointment_dao.get_by_doctor_id(doctor.id)
+
+    else:
+        appointments = []
+
+    # Filter (giữ nguyên)
     if filter_by and keyword:
         if filter_by == 'patient':
-            appointments = [
-                a for a in appointments
-                if a.patient and keyword in a.patient.name.lower()
-            ]
+            appointments = [a for a in appointments if a.patient and keyword in a.patient.name.lower()]
         elif filter_by == 'doctor':
-            appointments = [
-                a for a in appointments
-                if a.schedule and a.schedule.doctor and keyword in a.schedule.doctor.name.lower()
-            ]
-        elif filter_by == 'date':
-            try:
-                filter_date = datetime.strptime(keyword, '%Y-%m-%d').date()
-                appointments = [
-                    a for a in appointments
-                    if a.schedule and a.schedule.from_date.date() == filter_date
-                ]
-            except ValueError:
-                pass  # Ignore invalid date format
+            appointments = [a for a in appointments if a.schedule and a.schedule.doctor and keyword in a.schedule.doctor.name.lower()]
 
-    return render_template("appointment/appointments.html", appointments=appointments)
+    return render_template(
+        "appointment/appointments.html",
+        appointments=appointments
+    )
 
 @app.route("/appointment/add", methods=["GET", "POST"])
 @login_required()
@@ -702,7 +778,6 @@ def add_appointment():
     available_schedules = []
     datetime_obj_str = ""
 
-    # Lấy tham số từ GET (dùng để load dropdown dần dần)
     service_type_id = request.args.get('service_type_id', type=int)
     service_id = request.args.get('service_id', type=int)
     doctor_id = request.args.get('doctor_id', type=int)
@@ -711,13 +786,13 @@ def add_appointment():
 
     user = user_dao.get_by_id(session["user_id"])
 
-    # === XỬ LÝ PATIENT_ID THEO ROLE ===
-    if session.get('role') == RoleEnum.PATIENT.value:  # Bệnh nhân chỉ đặt cho chính mình
+    if session.get('role') != RoleEnum.PATIENT.value and session.get('role') != RoleEnum.ADMIN.value:
         patient = patient_dao.get_by_user_id(user.id)
         if not patient:
             flash("Bệnh nhân không tồn tại!", "danger")
             return redirect(url_for("appointments"))
         patient_id = patient.id
+
     # else: nhân viên/admin có thể chọn bệnh nhân qua dropdown → sẽ lấy từ form khi POST
 
     # === LOAD DỮ LIỆU THEO BƯỚC ===
@@ -817,6 +892,7 @@ def add_appointment():
         selected_datetime=appt_date,  # dùng cho hidden field nếu cần
         err=err
     )
+
 @app.route("/appointment/edit/<int:id>", methods=["GET","POST"])
 @login_required()
 def edit_appointment(id):
@@ -834,9 +910,12 @@ def edit_appointment(id):
     return render_template("appointment/appointment_edit.html", appointment=appointment, patients=patients, doctors=doctors)
 
 @app.route("/appointment/delete/<int:id>")
-@login_required()
+@login_required(RoleEnum.ADMIN.value)
 def delete_appointment(id):
-    appointment_dao.delete(id)
+    if appointment_dao.cancel(id):
+        flash("Lịch hẹn đã được hủy thành công!", "success")
+    else:
+        flash("Lịch hẹn không tồn tại hoặc đã hủy trước đó.", "warning")
     return redirect(url_for("appointments"))
 
 @app.route("/service-types")
@@ -879,6 +958,7 @@ def edit_service_type(id):
 def delete_service_type(id):
     serviceType_dao.soft_delete(id)  # DAO tự flash thông báo chi tiết
     return redirect(url_for("serviceTypes"))
+
 @app.route("/services")
 @login_required()
 def services():
@@ -969,7 +1049,7 @@ def edit_medicine_type(id):
 @app.route("/medicine-type/delete/<int:id>")
 @login_required(RoleEnum.ADMIN.value)
 def delete_medicine_type(id):
-    medicineType_dao.soft_delete(id)  # giờ flash đã được xử lý trong DAO
+    medicineType_dao.soft_delete(id)
     return redirect(url_for("medicineTypes"))
 
 @app.route("/medicines")
@@ -1018,16 +1098,65 @@ def delete_medicine(id):
         flash("Xóa thuốc thành công! (Đã ẩn khỏi danh sách)", "success")
     else:
         flash("Không tìm thấy thuốc hoặc đã bị xóa trước đó!", "danger")
-    return redirect(url_for("medicines"))
-@app.route("/bills")
-@login_required()
-def bills():
-    all_bills = bill_dao.get_all()
-    status_filter = request.args.get("status", "").strip().lower()
-    if status_filter:
-        all_bills = [b for b in all_bills if status_filter in b.status.lower()]
-    return render_template("bill/bills.html", bills=all_bills)
 
+    return redirect(url_for("medicines"))
+
+@app.route("/bills")
+@login_required(RoleEnum.USER.value, RoleEnum.PATIENT.value, RoleEnum.DOCTOR.value, RoleEnum.ADMIN.value)
+def bills():
+    user_id = session.get("user_id")
+    role = session.get("role")
+
+    # Bảo vệ thêm (dù decorator đã kiểm tra)
+    if not user_id or role is None:
+        flash("Vui lòng đăng nhập lại.", "danger")
+        return redirect(url_for("login"))
+
+    # Chuẩn hóa role một lần
+    role_norm = role.lower() if isinstance(role, str) else role
+
+    # Lấy tất cả bill (đã preload relationship)
+    all_bills = bill_dao.get_all()
+    bills = []
+
+    # === Phân quyền lấy dữ liệu ===
+    if role_norm in [RoleEnum.ADMIN.value, "admin"]:
+        bills = all_bills
+
+    elif role_norm in [RoleEnum.USER.value, RoleEnum.PATIENT.value, "user", "patient"]:
+        patient = patient_dao.get_by_user_id(user_id)
+        if patient:
+            bills = [b for b in all_bills if b.appointment and b.appointment.patient_id == patient.id]
+        if not bills:
+            flash("Bạn chưa có hóa đơn nào.", "info")
+
+    elif role_norm in [RoleEnum.DOCTOR.value, "doctor"]:
+        doctor = doctor_dao.get_by_user_id(user_id)
+        if doctor:
+            bills = [
+                b for b in all_bills
+                if b.appointment and b.appointment.schedule and b.appointment.schedule.doctor_id == doctor.id
+            ]
+        if not bills:
+            flash("Bạn chưa có hóa đơn nào từ bệnh nhân.", "info")
+
+    # === Tìm kiếm & lọc ===
+    filter_by = request.args.get("filter_by")
+    keyword = request.args.get("keyword", "").strip().lower()
+
+    if filter_by and keyword:
+        def matches(bill):
+            if filter_by == "patient_name" and bill.appointment and bill.appointment.patient:
+                return keyword in bill.appointment.patient.name.lower()
+            if filter_by == "doctor_name" and bill.appointment and bill.appointment.schedule and bill.appointment.schedule.doctor:
+                return keyword in bill.appointment.schedule.doctor.name.lower()
+            if filter_by == "status" and bill.status and bill.status.name:
+                return keyword in bill.status.name.lower()
+            return False
+
+        bills = [b for b in bills if matches(bill)]
+
+    return render_template("bill/bills.html", bills=bills)
 @app.route("/bill/add/<int:appointment_id>", methods=["GET","POST"])
 @login_required(RoleEnum.ADMIN.value)
 def add_bill(appointment_id):
@@ -1042,20 +1171,223 @@ def add_bill(appointment_id):
         return redirect(url_for("bills"))
     return render_template("bill/bill_add.html", appointment=appointment)
 
-@app.route("/bill/pay/<int:id>", methods=["GET","POST"])
+# @app.route("/bill/pay/<int:id>", methods=["GET","POST"])
+# @login_required()
+# def pay_bill(id):
+#     bill = bill_dao.get_by_id(id)
+#     if not bill:
+#         flash("Hóa đơn không tồn tại!")
+#         return redirect(url_for("bills"))
+#     if request.method == "POST":
+#         payment_method = request.form["payment_method"]
+#         bill_dao.update_status(bill.id, "Đã thanh toán", payment_method)
+#         flash("Thanh toán thành công!")
+#         return redirect(url_for("bills"))
+#     return render_template("bill/bill_pay.html", bill=bill)
+
+
+# @app.route("/bill/pay/<int:id>", methods=["GET", "POST"])
+# @login_required()
+# def pay_bill(id):
+#     bill = bill_dao.get_by_id(id)
+#     if not bill:
+#         flash("Hóa đơn không tồn tại!", "danger")
+#         return redirect(url_for("bills"))
+#
+#     # Tính lại tổng tiền nếu có dịch vụ/thuốc (nếu bạn đã thêm recalculate_total)
+#     # bill_dao.recalculate_total(id)  # Uncomment nếu đã có hàm này
+#     # bill = bill_dao.get_by_id(id)  # Reload lại bill
+#
+#     if request.method == "POST":
+#         payment_method = request.form.get("payment_method")
+#
+#         try:
+#             amount = int(round(bill.total))
+#             if amount <= 0:
+#                 flash("Tổng tiền hóa đơn là 0đ. Vui lòng thêm dịch vụ/thuốc trước khi thanh toán!", "warning")
+#                 return redirect(url_for("bills"))
+#         except (TypeError, ValueError):
+#             flash("Lỗi định dạng số tiền hóa đơn!", "danger")
+#             return redirect(url_for("bills"))
+#
+#         if payment_method == "cash":
+#             bill_dao.update_status(bill.id, "Đã thanh toán", "cash")
+#             flash("Thanh toán thành công bằng tiền mặt!", "success")
+#             return redirect(url_for("bills"))
+#
+#         elif payment_method == "momo":
+#             import uuid
+#             import hmac
+#             import hashlib
+#
+#             order_id = str(uuid.uuid4())
+#             request_id = str(uuid.uuid4())
+#
+#             # Thứ tự param CHÍNH XÁC theo tài liệu MoMo
+#             raw_signature = (
+#                 f"accessKey={MOMO_ACCESS_KEY}"
+#                 f"&amount={amount}"
+#                 f"&extraData="
+#                 f"&ipnUrl={MOMO_NOTIFY_URL}"
+#                 f"&orderId={order_id}"
+#                 f"&orderInfo=Thanh toán hóa đơn nha khoa #{bill.id}"
+#                 f"&partnerCode={MOMO_PARTNER_CODE}"
+#                 f"&redirectUrl={MOMO_RETURN_URL}"
+#                 f"&requestId={request_id}"
+#                 f"&requestType=captureWallet"
+#             )
+#
+#             signature = hmac.new(MOMO_SECRET_KEY.encode(), raw_signature.encode(), hashlib.sha256).hexdigest()
+#
+#             payload = {
+#                 "partnerCode": MOMO_PARTNER_CODE,
+#                 "accessKey": MOMO_ACCESS_KEY,
+#                 "requestId": request_id,
+#                 "amount": str(amount),
+#                 "orderId": order_id,
+#                 "orderInfo": f"Thanh toán hóa đơn nha khoa #{bill.id}",
+#                 "redirectUrl": MOMO_RETURN_URL,
+#                 "ipnUrl": MOMO_NOTIFY_URL,
+#                 "extraData": "",
+#                 "requestType": "captureWallet",
+#                 "signature": signature
+#             }
+#
+#             try:
+#                 response = requests.post(MOMO_ENDPOINT, json=payload, timeout=10)
+#                 res_json = response.json()
+#                 print("MoMo API Response:", res_json)  # Debug quan trọng!
+#
+#                 if res_json.get("payUrl") and str(res_json.get("resultCode")) == "0":
+#                     # Lưu tạm order_id và phương thức
+#                     bill.order_id = order_id
+#                     bill.payment_method = "momo"
+#                     bill_dao.update(bill)
+#                     return redirect(res_json["payUrl"])
+#                 else:
+#                     error_msg = res_json.get("message", "Lỗi không xác định")
+#                     error_code = res_json.get("resultCode", "Unknown")
+#                     flash(f"Thanh toán MoMo thất bại [{error_code}]: {error_msg}", "danger")
+#                     return redirect(url_for("pay_bill", id=id))
+#
+#             except requests.exceptions.RequestException as e:
+#                 flash(f"Lỗi kết nối MoMo: {str(e)}", "danger")
+#                 return redirect(url_for("pay_bill", id=id))
+#
+#     # GET: hiển thị form
+#     return render_template("bill/bill_pay.html", bill=bill)
+
+@app.route("/bill/pay/<int:id>", methods=["GET", "POST"])
 @login_required()
 def pay_bill(id):
     bill = bill_dao.get_by_id(id)
     if not bill:
-        flash("Hóa đơn không tồn tại!")
+        flash("Hóa đơn không tồn tại!", "danger")
         return redirect(url_for("bills"))
-    if request.method == "POST":
-        payment_method = request.form["payment_method"]
-        bill_dao.update_status(bill.id, "Đã thanh toán", payment_method)
-        flash("Thanh toán thành công!")
-        return redirect(url_for("bills"))
-    return render_template("bill/bill_pay.html", bill=bill)
 
+    test_amount = 10000  # Để test MoMo sandbox
+
+    if request.method == "POST":
+        payment_method = request.form.get("payment_method")  # Chỉ lấy khi POST
+
+        amount = test_amount  # Chế độ test
+
+        if payment_method == "cash":
+            bill_dao.update_status(bill.id, "Đã thanh toán", "cash")
+            flash(f"TEST: Thanh toán tiền mặt thành công! ({amount:,}đ)", "success")
+            return redirect(url_for("bills"))
+
+        elif payment_method == "momo":
+            import uuid
+            import hmac
+            import hashlib
+            import requests
+
+            order_id = str(uuid.uuid4())
+            request_id = str(uuid.uuid4())
+
+            # THỨ TỰ ĐÚNG - BẮT ĐẦU BẰNG accessKey
+            raw_signature = (
+                f"accessKey={MOMO_ACCESS_KEY}"
+                f"&amount={amount}"
+                f"&extraData="
+                f"&ipnUrl={MOMO_NOTIFY_URL}"
+                f"&orderId={order_id}"
+                f"&orderInfo=TEST - Hóa đơn #{bill.id}"
+                f"&partnerCode={MOMO_PARTNER_CODE}"
+                f"&redirectUrl={MOMO_RETURN_URL}"
+                f"&requestId={request_id}"
+                f"&requestType=captureWallet"
+            )
+
+            signature = hmac.new(
+                MOMO_SECRET_KEY.encode('utf-8'),
+                raw_signature.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()
+
+            payload = {
+                "partnerCode": MOMO_PARTNER_CODE,
+                "accessKey": MOMO_ACCESS_KEY,
+                "requestId": request_id,
+                "amount": str(amount),
+                "orderId": order_id,
+                "orderInfo": f"TEST - Hóa đơn #{bill.id}",
+                "redirectUrl": MOMO_RETURN_URL,
+                "ipnUrl": MOMO_NOTIFY_URL,
+                "extraData": "",
+                "requestType": "captureWallet",
+                "signature": signature
+            }
+
+            try:
+                response = requests.post(MOMO_ENDPOINT, json=payload, timeout=15)
+                res_json = response.json()
+                print("=== MoMo Response ===")
+                print(res_json)
+
+                if res_json.get("resultCode") == 0 and res_json.get("payUrl"):
+                    bill.order_id = order_id
+                    bill.payment_method = "momo"
+                    bill.total = amount
+                    bill_dao.update(bill)
+                    return redirect(res_json["payUrl"])
+                else:
+                    flash(f"Lỗi MoMo [{res_json.get('resultCode')}]: {res_json.get('message', 'Không rõ')}", "danger")
+                    return redirect(url_for("pay_bill", id=id))
+
+            except Exception as e:
+                print("Lỗi kết nối MoMo:", e)
+                flash(f"Lỗi kết nối MoMo: {str(e)}", "danger")
+                return redirect(url_for("pay_bill", id=id))
+
+    # GET request: chỉ hiển thị form, KHÔNG dùng payment_method ở đây
+    return render_template(
+        "bill/bill_pay.html",
+        bill=bill,
+        display_amount=test_amount
+    )
+@app.route("/bill/momo_return")
+def momo_return():
+    order_id = request.args.get("orderId")
+    result_code = request.args.get("resultCode")
+
+    if not order_id or not result_code:
+        flash("Không nhận được phản hồi từ MoMo!", "danger")
+        return redirect(url_for("bills"))
+
+    bill = bill_dao.get_by_order_id(order_id)
+    if not bill:
+        flash("Không tìm thấy hóa đơn!", "danger")
+        return redirect(url_for("bills"))
+
+    if result_code == "0":
+        bill_dao.update_status(bill.id, "Đã thanh toán", "momo")
+        flash("TEST MoMo: Thanh toán thành công! 🎉", "success")
+    else:
+        flash(f"TEST MoMo: Thanh toán thất bại (mã lỗi: {result_code})", "danger")
+
+    return redirect(url_for("bills"))
 @app.route("/bill/print/<int:id>")
 @login_required()
 def print_bill(id):

@@ -10,7 +10,8 @@ class Appointment(Base):
     patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
     schedule_id = Column(Integer, ForeignKey("schedules.id"), nullable=False)
     description = Column(String(255), default="")
+    status = Column(Integer, default=0)
 
     patient = relationship("Patient", back_populates="appointments")
     schedule = relationship("Schedule", back_populates="appointments")
-    bill = relationship("Bill", back_populates="appointment")
+    bill = relationship("Bill", back_populates="appointment", uselist=False)  # ← Phải có uselist=False

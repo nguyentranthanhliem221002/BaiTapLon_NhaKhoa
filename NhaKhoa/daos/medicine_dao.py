@@ -7,7 +7,7 @@ class MedicineDAO:
     # Lấy tất cả thuốc đang hoạt động (status == 0)
     def get_all_medicines(self):
         with get_session() as session:
-            medicines = session.query(Medicine).filter(Medicine.status == 0).all()
+            medicines = session.query(Medicine).filter(Medicine.active == True).all()
             for m in medicines:
                 m.type_name = m.medicine_type.name if m.medicine_type else "Chưa xác định"
             return medicines
@@ -16,7 +16,7 @@ class MedicineDAO:
     def get_by_id(self, medicine_id):
         with get_session() as session:
             medicine = session.query(Medicine) \
-                .filter(Medicine.id == medicine_id, Medicine.status == 0) \
+                .filter(Medicine.id == medicine_id, Medicine.active == True) \
                 .first()
             if medicine:
                 medicine.type_name = medicine.medicine_type.name if medicine.medicine_type else "Chưa xác định"
@@ -41,8 +41,8 @@ class MedicineDAO:
     def soft_delete(self, id: int):
         with get_session() as session:
             medicine = session.get(Medicine, id)
-            if medicine and medicine.status == 0:
-                medicine.status = -1
+            if medicine and medicine.active == True:
+                medicine.active = False
                 session.commit()
                 return True
             return False

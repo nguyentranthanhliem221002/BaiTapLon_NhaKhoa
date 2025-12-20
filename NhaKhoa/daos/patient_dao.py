@@ -8,7 +8,7 @@ class PatientDAO:
     def get_all(self):
         with get_session() as session:
             return session.query(Patient) \
-                .filter(Patient.status == 0) \
+                .filter(Patient.active == True) \
                 .all()
 
 
@@ -17,7 +17,7 @@ class PatientDAO:
             return session.query(Patient) \
                 .filter(
                 Patient.id == id,
-                Patient.status == 0
+                Patient.active == True
             ).first()
 
     def add(self, patient: Patient):
@@ -59,13 +59,13 @@ class PatientDAO:
             if not patient:
                 return
 
-            patient.status = -1
+            patient.active = False
             session.commit()
 
     def search(self, filter_by: str, keyword: str):
         with get_session() as session:
             query = session.query(Patient) \
-                .filter(Patient.status == 0)
+                .filter(Patient.active == True)
 
             if filter_by == "name":
                 query = query.filter(Patient.name.ilike(f"%{keyword}%"))
@@ -84,6 +84,6 @@ class PatientDAO:
             return session.query(Patient) \
                 .filter(
                 Patient.user_id == user_id,
-                Patient.status == 0
+                Patient.active == True
             ).first()
 

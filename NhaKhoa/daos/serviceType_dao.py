@@ -5,41 +5,35 @@ from NhaKhoa.database.db import get_session
 
 
 class ServiceTypeDAO:
-    # Lấy tất cả loại dịch vụ đang hoạt động (status == 0)
     def get_all_service_types(self):
         with get_session() as session:
             return session.query(ServiceType) \
-                .filter(ServiceType.status == 0) \
+                .filter(ServiceType.active == True) \
                 .all()
 
-    # Lấy theo ID, chỉ lấy nếu status == 0
     def get_by_id(self, id: int):
         with get_session() as session:
             return session.query(ServiceType) \
-                .filter(ServiceType.id == id, ServiceType.status == 0) \
+                .filter(ServiceType.id == id, ServiceType.active == True) \
                 .first()
 
-    # Thêm loại dịch vụ mới (status mặc định = 0 từ model)
     def add(self, name: str):
         with get_session() as session:
-            service_type = ServiceType(name=name)  # status tự động = 0
+            service_type = ServiceType(name=name)
             session.add(service_type)
             session.commit()
             return service_type
 
-    # Cập nhật loại dịch vụ
     def update(self, service_type: ServiceType):
         with get_session() as session:
             session.merge(service_type)
             session.commit()
 
-    # XÓA MỀM: kiểm tra ràng buộc + đặt status = -1
     def soft_delete(self, id: int):
         with get_session() as session:
-            # Kiểm tra còn dịch vụ nào thuộc loại này và đang hoạt động không
             has_service = session.query(Service).filter(
                 Service.service_type_id == id,
-                Service.status == 0  # chỉ kiểm tra dịch vụ đang hoạt động
+                Service.active == True
             ).first()
 
             if has_service:
@@ -47,8 +41,8 @@ class ServiceTypeDAO:
                 return False
 
             type_obj = session.query(ServiceType).filter(ServiceType.id == id).first()
-            if type_obj and type_obj.status == 0:
-                type_obj.status = -1
+            if type_obj and type_obj.active == True:
+                type_obj.active = False
                 session.commit()
                 flash("Xóa loại dịch vụ thành công! (Đã ẩn khỏi hệ thống)", "success")
                 return True
@@ -56,12 +50,11 @@ class ServiceTypeDAO:
                 flash("Không tìm thấy loại dịch vụ hoặc đã bị xóa trước đó!", "warning")
                 return False
 
-    # Tìm kiếm loại dịch vụ (chỉ lấy status == 0)
     def search(self, keyword: str):
         with get_session() as session:
             return session.query(ServiceType) \
                 .filter(
-                    ServiceType.status == 0,
+                    ServiceType.active == True,
                     ServiceType.name.ilike(f"%{keyword}%")
                 ) \
                 .all()

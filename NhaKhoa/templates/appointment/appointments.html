@@ -2,9 +2,10 @@
 
 {% block content %}
 <h2>Danh sách lịch hẹn</h2>
+{% if session['role'] == RoleEnum.ADMIN.value or session['role'] == RoleEnum.PATIENT.value %}
 <a class="btn btn-success mb-3" href="{{ url_for('add_appointment') }}">+ Thêm lịch hẹn</a>
+{%endif%}
 
-<!-- Form tìm kiếm -->
 <form method="GET" action="{{ url_for('appointments') }}" class="mb-3 row g-2">
     <div class="col-auto">
         <select name="filter_by" class="form-select" id="filter_by" onchange="toggleKeywordInput()">
@@ -55,8 +56,10 @@
         <td>{{ a.description }}</td>
         <td>
             <a class="btn btn-primary btn-sm" href="{{ url_for('edit_appointment', id=a.id) }}">Sửa</a>
-            <a class="btn btn-danger btn-sm" href="{{ url_for('delete_appointment', id=a.id) }}"
-               onclick="return confirm('Xóa lịch hẹn?')">Xóa</a>
+            {% if session['role'] == RoleEnum.ADMIN.value %}
+                <a class="btn btn-danger btn-sm" href="{{ url_for('delete_appointment', id=a.id) }}" onclick="return confirm('Xóa lịch hẹn?')">Xóa</a>
+            {%endif%}
+
         </td>
     </tr>
     {% endfor %}
