@@ -1,0 +1,114 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Thống kê{% endblock %}
+
+{% block content %}
+<h2 class="mb-1">Thống kê</h2>
+<p class="text-muted mb-4">
+    Ngày tạo hóa đơn:
+    <strong>{{ selected_date }}</strong>
+</p>
+
+<form method="GET"
+      action="{{ url_for('thongke') }}"
+      class="mb-4 row g-3 align-items-end">
+
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">
+            Ngày tạo hóa đơn
+        </label>
+        <input type="date"
+               name="date"
+               class="form-control"
+               value="{{ selected_date }}">
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">
+            Bác sĩ
+        </label>
+        <select name="doctor_id" class="form-select">
+            <option value="">-- Tất cả bác sĩ --</option>
+            {% for d in doctors %}
+            <option value="{{ d.id }}"
+                {% if selected_doctor_id == d.id %}selected{% endif %}>
+                {{ d.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <button type="submit"
+                class="btn btn-primary w-100">
+            Xem thống kê
+        </button>
+    </div>
+</form>
+
+<!-- Tổng quan -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-primary h-100">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase text-muted">
+                    Tổng số hóa đơn
+                </h6>
+                <p class="card-text fs-4 fw-bold mb-0">
+                    {{ stats.total_bills }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-success h-100">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase text-muted">
+                    Tổng doanh thu
+                </h6>
+                <p class="card-text fs-4 fw-bold text-success mb-0">
+                    {{ "{:,.0f}".format(stats.total_revenue) }} VNĐ
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bảng thống kê theo bác sĩ -->
+<h5 class="mb-3">
+    Thống kê theo bác sĩ
+</h5>
+
+<table class="table table-striped table-bordered align-middle">
+    <thead class="table-dark">
+        <tr>
+            <th style="width: 80px">ID</th>
+            <th>Bác sĩ</th>
+            <th style="width: 150px">Số bệnh nhân</th>
+            <th style="width: 200px" class="text-end">
+                Tổng tiền toa thuốc
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for d in stats.doctor_stats %}
+        <tr>
+            <td>{{ d.id }}</td>
+            <td>{{ d.name }}</td>
+            <td>{{ d.patient_count }}</td>
+            <td class="text-end">
+                {{ "{:,.0f}".format(d.total_money or 0) }} VNĐ
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if stats.doctor_stats|length == 0 %}
+<div class="alert alert-warning mt-3">
+    Không có dữ liệu thống kê cho ngày đã chọn.
+</div>
+{% endif %}
+
+{% endblock %}
