@@ -14,6 +14,5 @@ class Schedule(Base):
     num_patient = Column(Integer, default=0)
     max_patient = Column(Integer, default=10)
 
-    # Relationships
     doctor = relationship("Doctor", back_populates="schedules")
     appointments = relationship("Appointment", back_populates="schedule")

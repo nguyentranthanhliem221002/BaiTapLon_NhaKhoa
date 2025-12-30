@@ -4,7 +4,6 @@ from NhaKhoa.models.medicine import Medicine
 from NhaKhoa.database.db import get_session
 
 class MedicineTypeDAO:
-    # Lấy tất cả loại thuốc đang hoạt động
     def get_all_medicine_types(self):
         with get_session() as session:
             return session.query(MedicineType) \
@@ -17,15 +16,13 @@ class MedicineTypeDAO:
                 .filter(MedicineType.id == id, MedicineType.active == True) \
                 .first()
 
-    # Thêm loại thuốc mới
     def add_medicine_type(self, name: str):
         with get_session() as session:
-            new_type = MedicineType(name=name)  # status = 0 mặc định
+            new_type = MedicineType(name=name)
             session.add(new_type)
             session.commit()
             return new_type
 
-    # Cập nhật loại thuốc
     def update(self, type_obj: MedicineType):
         with get_session() as session:
             session.merge(type_obj)

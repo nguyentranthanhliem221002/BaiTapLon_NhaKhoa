@@ -22,11 +22,9 @@ class PatientDAO:
 
     def add(self, patient: Patient):
         with get_session() as session:
-            # 1. Thêm patient trước
             session.add(patient)
             session.commit()
 
-            # 2. Tạo user cho patient
             username = patient.phone
             raw_password = "1"
             hashed_password = bcrypt.hashpw(
@@ -44,7 +42,6 @@ class PatientDAO:
             session.add(user)
             session.commit()
 
-            # 3. Gán user_id đúng
             patient.user_id = user.id
             session.commit()
 

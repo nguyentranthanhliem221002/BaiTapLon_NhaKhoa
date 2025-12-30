@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-from NhaKhoa.models.base import Base  # giả sử bạn dùng Base từ đây
+from NhaKhoa.models.base import Base
 
 class Specialty(Base):
     __tablename__ = "specialty"

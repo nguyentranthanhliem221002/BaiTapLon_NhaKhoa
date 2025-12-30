@@ -18,7 +18,6 @@ class ThongKeDAO:
 
         with get_session() as session:
 
-            # ===== 1. Tổng hóa đơn + doanh thu =====
             bill_query = session.query(
                 func.count(Bill.id),
                 func.coalesce(func.sum(Bill.total), 0)
@@ -31,7 +30,6 @@ class ThongKeDAO:
                 Bill.created_date < next_day
             )
 
-            # ===== 2. Thống kê theo bác sĩ =====
             doctor_query = session.query(
                 Doctor.id,
                 Doctor.name,
@@ -48,7 +46,6 @@ class ThongKeDAO:
                 Bill.created_date < next_day
             )
 
-            # 👉 Lọc theo bác sĩ
             if doctor_id:
                 bill_query = bill_query.filter(Schedule.doctor_id == doctor_id)
                 doctor_query = doctor_query.filter(Doctor.id == doctor_id)

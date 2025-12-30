@@ -1,14 +1,3 @@
-# from sqlalchemy import Column, Integer, String,ForeignKey
-# from sqlalchemy.orm import relationship
-# from NhaKhoa.models.base import Base
-# class ServiceType(Base):
-#     __tablename__ = "service_types"
-#
-#     name = Column(String(100), nullable=False)
-#
-#     services = relationship('Service', back_populates='service_type', lazy=True)
-#     specialty_id = Column(Integer, ForeignKey('specialty.id'))
-
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from NhaKhoa.models.base import Base

@@ -26,10 +26,6 @@ from NhaKhoa.models.medicineType import MedicineType
 from NhaKhoa.models.medicine import Medicine
 from NhaKhoa.models.schedule import Schedule
 
-
-# =====================================================
-# TẠO DATABASE NẾU CHƯA CÓ
-# =====================================================
 temp_engine = create_engine(
     f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/",
     future=True
@@ -45,10 +41,6 @@ with temp_engine.connect() as conn:
     ))
     conn.commit()
 
-
-# =====================================================
-# ENGINE CHÍNH + SESSION
-# =====================================================
 engine = create_engine(SQLALCHEMY_DATABASE_URI, echo=False, future=True)
 
 SessionLocal = sessionmaker(
@@ -67,18 +59,11 @@ def get_session() -> Session:
     finally:
         session.close()
 
-
-# =====================================================
-# KHỞI TẠO DATABASE + SEED DATA
-# =====================================================
 def init_database():
     Base.metadata.create_all(bind=engine)
 
     with get_session() as db:
 
-        # =====================
-        # ROLES
-        # =====================
         if db.scalar(select(func.count(Role.id))) == 0:
             db.add_all([
                 Role(name="user", description="Regular user"),
@@ -88,9 +73,6 @@ def init_database():
             ])
             db.commit()
 
-        # =====================
-        # STATUSES
-        # =====================
         if db.scalar(select(func.count(Status.id))) == 0:
             db.add_all([
                 Status(name=s.value, description=f"Trạng thái: {s.value}")
@@ -98,9 +80,6 @@ def init_database():
             ])
             db.commit()
 
-        # =====================
-        # ADMIN USER (RIÊNG)
-        # =====================
         if db.scalar(
             select(func.count(User.id))
             .where(User.role_id == RoleEnum.ADMIN.value)
@@ -114,9 +93,6 @@ def init_database():
             ))
             db.commit()
 
-        # =====================
-        # SPECIALTIES
-        # =====================
         if db.scalar(select(func.count(Specialty.id))) == 0:
             db.add_all([
                 Specialty(name="Khám tổng quát", description="Khám sức khỏe răng miệng tổng quát"),
@@ -130,9 +106,6 @@ def init_database():
 
         specialties = db.scalars(select(Specialty).order_by(Specialty.id)).all()
 
-        # =====================
-        # DOCTORS + USERS
-        # =====================
         if db.scalar(select(func.count(Doctor.id))) == 0:
             doctors = [
                 ("doctor1", "doctor1@example.com", "0901123456", specialties[0].id),
@@ -150,7 +123,7 @@ def init_database():
                     role_id=RoleEnum.DOCTOR.value
                 )
                 db.add(user)
-                db.flush()  # lấy user.id
+                db.flush()
 
                 db.add(Doctor(
                     name=name,
@@ -161,9 +134,6 @@ def init_database():
 
             db.commit()
 
-        # =====================
-        # PATIENTS + USERS
-        # =====================
         if db.scalar(select(func.count(Patient.id))) == 0:
             patients = [
                 ("patient", 28, "0903765432", "Hà Nội", "patient1@example.com"),
@@ -181,17 +151,6 @@ def init_database():
                 db.add(user)
                 db.flush()
 
-                # db.add(Patient(
-                #     name=name,
-                #     age=age,
-                #     phone=phone,
-                #     address=address,
-                #     user_id=user.id
-                # ))
-
-        # =====================
-        # SERVICE TYPES
-        # =====================
         if db.scalar(select(func.count(ServiceType.id))) == 0:
             db.add_all([
                 ServiceType(name="Khám răng", specialty_id=specialties[0].id),
@@ -204,9 +163,6 @@ def init_database():
 
         service_types = db.scalars(select(ServiceType).order_by(ServiceType.id)).all()
 
-        # =====================
-        # SERVICES
-        # =====================
         if db.scalar(select(func.count(Service.id))) == 0:
             db.add_all([
                 Service(name="Khám tổng quát", service_type_id=service_types[0].id, price=100000),
@@ -219,9 +175,6 @@ def init_database():
             ])
             db.commit()
 
-        # =====================
-        # MEDICINE TYPES
-        # =====================
         if db.scalar(select(func.count(MedicineType.id))) == 0:
             db.add_all([
                 MedicineType(name="Thuốc giảm đau"),
@@ -232,9 +185,6 @@ def init_database():
 
         med_types = db.scalars(select(MedicineType).order_by(MedicineType.id)).all()
 
-        # =====================
-        # MEDICINES
-        # =====================
         if db.scalar(select(func.count(Medicine.id))) == 0:
             db.add_all([
                 Medicine(name="Paracetamol 500mg", medicine_type_id=med_types[0].id, price=2000),
@@ -244,9 +194,6 @@ def init_database():
             ])
             db.commit()
 
-        # =====================
-        # SCHEDULES (LỊCH LÀM VIỆC)
-        # =====================
         if db.scalar(select(func.count(Schedule.id))) == 0:
             doctors = db.scalars(select(Doctor)).all()
             now = datetime.now()
@@ -272,10 +219,6 @@ def init_database():
 
     print(">>> ✓ Database & Tables ready with seed data!")
 
-
-# =====================================================
-# RAW MYSQL CONNECTION (OPTIONAL)
-# =====================================================
 def get_connection():
     return pymysql.connect(
         host=DB_HOST,

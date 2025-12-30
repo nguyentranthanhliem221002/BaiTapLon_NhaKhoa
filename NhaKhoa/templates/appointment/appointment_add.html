@@ -7,7 +7,6 @@
     <form method="GET" action="{{ url_for('add_appointment') }}">
 
                     {% if session.get("role") == RoleEnum.PATIENT.value %}
-                    <!-- Chọn bệnh nhân (chỉ hiển thị cho nhân viên/admin) -->
         <div class="mb-3" >
             <label for="patient_id" class="form-label">Bệnh nhân</label>
             <select class="form-select" id="patient_id" name="patient_id" required>
@@ -19,7 +18,6 @@
         </div>
                     {% endif %}
 
-        <!-- Chọn loại dịch vụ -->
         <div class="mb-3">
             <label for="service_type_id" class="form-label">Loại dịch vụ</label>
             <select class="form-select" id="service_type_id" name="service_type_id" required onchange="this.form.submit()">
@@ -31,7 +29,6 @@
         </div>
 
         {% if services %}
-        <!-- Chọn dịch vụ cụ thể -->
         <div class="mb-3">
             <label for="service_id" class="form-label">Dịch vụ</label>
             <select class="form-select" id="service_id" name="service_id" required onchange="this.form.submit()">
@@ -46,7 +43,6 @@
         {% endif %}
 
         {% if doctors %}
-        <!-- Chọn bác sĩ -->
         <div class="mb-3">
             <label for="doctor_id" class="form-label">Bác sĩ</label>
             <select class="form-select" id="doctor_id" name="doctor_id" required onchange="this.form.submit()">
@@ -58,7 +54,6 @@
         </div>
         {% endif %}
 
-        <!-- Ngày giờ hẹn -->
         <div class="mb-3">
             <label for="appointment_date" class="form-label">Ngày hẹn</label>
             <input type="datetime-local"
@@ -89,7 +84,6 @@
             <textarea class="form-control" id="description" name="description" rows="3"></textarea>
         </div>
 
-        <!-- Hidden fields -->
         <input type="hidden" name="patient_id" value="{{ selected_patient }}">
         <input type="hidden" name="service_id" value="{{ selected_service }}">
         <input type="hidden" name="doctor_id" value="{{ selected_doctor }}">

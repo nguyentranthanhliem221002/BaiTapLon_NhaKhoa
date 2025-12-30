@@ -14,7 +14,6 @@
 <header class="bg-light shadow-sm ">
     <div class="container d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center">
-            <!-- Logo -->
             <img src="{{ url_for('static', filename='images/icon_logo.png') }}"
                  alt="Logo" style="width:40px; height:40px; object-fit:cover; margin-right:10px;">
             <h1 class="h3 mb-0 me-4">
@@ -28,13 +27,10 @@
             <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('dashboard') }}">Trang chủ</a>
 
             {% if session['role'] == RoleEnum.ADMIN.value %}
-            <!-- Bệnh nhân -->
             <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('patients') }}">Bệnh nhân</a>
 
-            <!-- Bác sĩ -->
             <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('doctors') }}">Bác sĩ</a>
 
-            <!-- Dịch vụ -->
             <div class="dropdown me-3">
                 <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                     Dịch vụ
@@ -46,10 +42,10 @@
             </div>
 
 
-            <!-- Lịch hẹn -->
+
             <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn</a>
 
-            <!-- Thuốc -->
+
             <div class="dropdown me-3">
                 <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                     Thuốc
@@ -70,15 +66,6 @@
             <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>
 
             {% elif session['role'] == RoleEnum.PATIENT.value or session['role'] == RoleEnum.USER.value %}
-            <!--                <div class="dropdown me-3">-->
-            <!--                    <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">-->
-            <!--                        Lịch hẹn-->
-            <!--                    </a>-->
-            <!--                    <ul class="dropdown-menu">-->
-            <!--                        <li><a class="dropdown-item" href="{{ url_for('my_appointments') }}">Lịch hẹn của tôi</a></li>-->
-            <!--                        <li><a class="dropdown-item" href="{{ url_for('add_appointment') }}">Đặt lịch hẹn</a></li>-->
-            <!--                    </ul>-->
-            <!--                </div>-->
             {% if session['role'] == RoleEnum.PATIENT.value %}
             <a class="text-dark me-3 mb-1 nav-link"
                href="{{ url_for('appointments') }}">
@@ -103,7 +90,6 @@
         </nav>
         {% endif %}
 
-        <!-- Tài khoản -->
         <div class="d-flex align-items-center gap-2">
             <div class="dropdown">
                 <button class="btn btn-success btn-sm dropdown-toggle d-flex align-items-center gap-2"
@@ -152,7 +138,6 @@
 <footer class="py-4 mt-4" style="background-color: #198754; color: white;">
     <div class="container" style="background-color: transparent;">
         <div class="row">
-            <!-- Cột 1: Logo + icon mạng xã hội (canh giữa) -->
             <div class="col-md-3 d-flex flex-column align-items-center gap-2 mb-3">
                 <img src="{{ url_for('static', filename='images/icon_logo.png') }}"
                      alt="Logo" style="width:50px; height:50px; object-fit:cover;">
@@ -174,14 +159,12 @@
             </div>
 
 
-            <!-- Cột 2 -->
             <div class="col-md-3 mb-3">
                 <h5>Liên hệ</h5>
                 <p>Địa chỉ: 123 Đường ABC, TP.HCM</p>
                 <p>Hotline: 0123 456 789</p>
             </div>
 
-            <!-- Cột 3 -->
             <div class="col-md-3 mb-3">
                 <h5>Dịch vụ</h5>
                 <p>Khám răng tổng quát</p>
@@ -189,7 +172,6 @@
                 <p>Niềng răng</p>
             </div>
 
-            <!-- Cột 4 -->
             <div class="col-md-3 mb-3">
                 <h5>Hỗ trợ</h5>
                 <p>FAQ</p>

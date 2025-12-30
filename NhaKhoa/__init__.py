@@ -4,8 +4,6 @@ from flask_sqlalchemy.model import Model
 
 app = Flask(__name__)
 
-# ==============================
-# CẤU HÌNH DATABASE
 DB_USER = "root"
 DB_PASSWORD = ""
 DB_HOST = "localhost"

@@ -19,7 +19,6 @@ from oauthlib.oauth2 import WebApplicationClient
 from NhaKhoa import app
 from NhaKhoa.daos.schedule_dao import ScheduleDAO
 from NhaKhoa.daos.specialty_dao import SpecialtyDAO
-# Import DAO và Models
 from NhaKhoa.database.db import init_database, get_connection
 from NhaKhoa.models.role import RoleEnum
 from daos.user_dao import UserDAO
@@ -49,8 +48,8 @@ app.config.update(
     MAIL_SERVER='smtp.gmail.com',
     MAIL_PORT=587,
     MAIL_USE_TLS=True,
-    MAIL_USERNAME='youremail@gmail.com',  # Thay bằng Gmail của bạn
-    MAIL_PASSWORD='yourapppassword'       # Thay bằng App Password
+    MAIL_USERNAME='youremail@gmail.com',
+    MAIL_PASSWORD='yourapppassword'
 )
 mail = Mail(app)
 
@@ -62,7 +61,6 @@ client = WebApplicationClient(GOOGLE_CLIENT_ID)
 def get_google_provider_cfg():
     return requests.get(GOOGLE_DISCOVERY_URL).json()
 
-# DECORATOR PHÂN QUYỀN
 def login_required(*roles):
     def decorator(f):
         @wraps(f)
@@ -96,14 +94,12 @@ bill_dao = BillDAO()
 def inject_role_enum():
     return dict(RoleEnum=RoleEnum)
 
-# DASHBOARD
 @app.route("/")
 @app.route("/dashboard")
 @login_required()
 def dashboard():
     return render_template("index.html", user=session["user"], role=session["role"])
 
-# Search
 @app.route("/search")
 def search():
     query = request.args.get("q", "")
@@ -160,7 +156,6 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# PASSWORD RESET / CHANGE
 @app.route("/forgot-password", methods=["GET","POST"])
 def forgot_password():
     if request.method == "POST":
@@ -223,7 +218,6 @@ def change_password():
             return redirect(url_for("dashboard"))
     return render_template("account/change_password.html")
 
-# GOOGLE OAUTH LOGIN
 @app.route("/login/google")
 def google_login():
     google_provider_cfg = get_google_provider_cfg()
@@ -298,7 +292,6 @@ def add_patient():
             status=0
         )
 
-        # Upload ảnh
         file = request.files.get("image")
         if file and file.filename:
             filename = secure_filename(file.filename)
@@ -351,7 +344,6 @@ def create_appointment():
     if schedule.num_patient >= schedule.max_patient:
         return jsonify(success=False, message="Khung giờ đã đầy")
 
-    # ✅ tăng slot
     schedule.num_patient += 1
     schedule_dao.update(schedule)
 
@@ -437,21 +429,19 @@ def my_appointments():
             }
         })
 
-    # Xác định role hiện tại
     current_role_name = "USER" if user.role_id == RoleEnum.USER.value else "PATIENT"
 
-    # Chỉ khi là PATIENT mới lấy danh sách tất cả bệnh nhân để chọn
     all_patients = []
     if current_role_name == "PATIENT":
-        all_patients = patient_dao.get_all()  # <-- Lấy hết bệnh nhân active
+        all_patients = patient_dao.get_all()
 
     return render_template(
         "patient/patient_appointments.html",
         events=events,
         service_types=service_types,
-        patient_id=patient.id,           # patient mặc định của user hiện tại
+        patient_id=patient.id,
         current_role=current_role_name,
-        all_patients=all_patients        # <-- Truyền danh sách bệnh nhân vào template
+        all_patients=all_patients
     )
 @app.route("/api/services_by_type/<int:type_id>")
 def api_services_by_type(type_id):
@@ -467,14 +457,11 @@ def api_available_schedules():
         return jsonify([])
 
     try:
-        # Xử lý linh hoạt: chỉ ngày hoặc có giờ
         if 'T' in date_str:
-            # Có giờ: "2025-12-30T10:00"
             if len(date_str) == 16:
                 date_str += ':00'
             dt = datetime.fromisoformat(date_str)
         else:
-            # Chỉ ngày: "2025-12-30"
             dt = datetime.strptime(date_str, "%Y-%m-%d")
 
         selected_date = dt.date()
@@ -493,7 +480,7 @@ def api_available_schedules():
 
 @app.route("/doctors/by-service/<int:service_id>")
 def doctors_by_service(service_id):
-    doctors = doctor_dao.get_doctors_by_specialty(service_id)  # hoặc service_id nếu mapping đúng
+    doctors = doctor_dao.get_doctors_by_specialty(service_id)
     result = [{"id": d.id, "name": d.name} for d in doctors]
     return jsonify(result)
 
@@ -503,7 +490,7 @@ def api_doctors_by_service_type(service_type_id):
     if service_type and hasattr(service_type, 'specialty_id') and service_type.specialty_id:
         doctors = doctor_dao.get_doctors_by_specialty(service_type.specialty_id)
     else:
-        doctors = doctor_dao.get_all()  # fallback
+        doctors = doctor_dao.get_all()
     return jsonify([{"id": d.id, "name": d.name} for d in doctors])
 @app.route("/appointment/add_ajax", methods=["POST"])
 @login_required(RoleEnum.USER.value)
@@ -525,7 +512,7 @@ def add_appointment_ajax():
 @app.route("/patient/edit/<int:id>", methods=["GET", "POST"])
 @login_required()
 def edit_patient(id):
-    patient = patient_dao.get_by_id(id)  # đã filter status = 0
+    patient = patient_dao.get_by_id(id)
     if not patient:
         flash("Bệnh nhân không tồn tại hoặc đã bị xóa!")
         return redirect(url_for("patients"))
@@ -538,7 +525,6 @@ def edit_patient(id):
         patient.phone = data["phone"]
         patient.address = data["address"]
 
-        # Upload ảnh mới nếu có
         file = request.files.get("image")
         if file and file.filename:
             filename = secure_filename(file.filename)
@@ -569,7 +555,7 @@ def delete_patient(id):
     return redirect(url_for("patients"))
 
 @app.route("/doctors")
-@login_required(RoleEnum.ADMIN.value)  # Giả sử chỉ admin xem danh sách bác sĩ
+@login_required(RoleEnum.ADMIN.value)
 def doctors():
     filter_by = request.args.get("filter_by")
     keyword = request.args.get("keyword", "").strip().lower()
@@ -577,9 +563,8 @@ def doctors():
     if filter_by and keyword:
         all_doctors = doctor_dao.search(filter_by, keyword)
     else:
-        all_doctors = doctor_dao.get_all()  # hoặc get_all_active() nếu có
+        all_doctors = doctor_dao.get_all()
 
-    # Tạo list doctors với thêm tên chuyên khoa
     doctors_with_specialty = []
     for doc in all_doctors:
         specialty_name = specialty_dao.get_name_by_id(doc.specialty_id) or "Chưa xác định"
@@ -605,11 +590,10 @@ def add_doctor():
 
         new_doctor = Doctor(
             name=data.get("name"),
-            specialty_id=int(data.get("specialty_id")),  # ✅ FIX
+            specialty_id=int(data.get("specialty_id")),
             phone=data.get("phone")
         )
 
-        # Upload ảnh
         file = request.files.get("image")
         if file and file.filename:
             filename = secure_filename(file.filename)
@@ -637,7 +621,6 @@ def edit_doctor(id):
         doctor.name = data["name"]
         doctor.phone = data["phone"]
 
-        # Lấy specialty_id từ form (là ID số)
         try:
             specialty_id = int(data["specialty"])
             doctor.specialty_id = specialty_id
@@ -645,7 +628,6 @@ def edit_doctor(id):
             flash("Vui lòng chọn chuyên khoa hợp lệ!", "danger")
             return redirect(url_for("edit_doctor", id=id))
 
-        # Upload ảnh
         file = request.files.get('image')
         if file and file.filename:
             filename = secure_filename(file.filename)
@@ -657,8 +639,7 @@ def edit_doctor(id):
         flash("Cập nhật thông tin bác sĩ thành công!", "success")
         return redirect(url_for("doctors"))
 
-    # GET: hiển thị form
-    specialties = specialty_dao.get_all()  # Lấy danh sách chuyên khoa
+    specialties = specialty_dao.get_all()
     return render_template(
         "doctor/doctor_edit.html",
         doctor=doctor,
@@ -671,37 +652,6 @@ def delete_doctor(id):
     doctor_dao.delete(id)
     return redirect(url_for("doctors"))
 
-# @app.route("/appointments")
-# def appointments():
-#     filter_by = request.args.get('filter_by')
-#     keyword = request.args.get('keyword', '').lower()
-#
-#     # Get appointments with all relationships preloaded
-#     appointments = appointment_dao.get_all_with_doctor_names()
-#
-#     # Apply filtering if needed
-#     if filter_by and keyword:
-#         if filter_by == 'patient':
-#             appointments = [
-#                 a for a in appointments
-#                 if a.patient and keyword in a.patient.name.lower()
-#             ]
-#         elif filter_by == 'doctor':
-#             appointments = [
-#                 a for a in appointments
-#                 if a.schedule and a.schedule.doctor and keyword in a.schedule.doctor.name.lower()
-#             ]
-#         elif filter_by == 'date':
-#             try:
-#                 filter_date = datetime.strptime(keyword, '%Y-%m-%d').date()
-#                 appointments = [
-#                     a for a in appointments
-#                     if a.schedule and a.schedule.from_date.date() == filter_date
-#                 ]
-#             except ValueError:
-#                 pass  # Ignore invalid date format
-#
-#     return render_template("appointment/appointments.html", appointments=appointments)
 
 @app.route("/appointments")
 def appointments():
@@ -724,7 +674,6 @@ def appointments():
     else:
         appointments = []
 
-    # Filter (giữ nguyên)
     if filter_by and keyword:
         if filter_by == 'patient':
             appointments = [a for a in appointments if a.patient and keyword in a.patient.name.lower()]
@@ -762,18 +711,12 @@ def add_appointment():
             return redirect(url_for("appointments"))
         patient_id = patient.id
 
-    # else: nhân viên/admin có thể chọn bệnh nhân qua dropdown → sẽ lấy từ form khi POST
-
-    # === LOAD DỮ LIỆU THEO BƯỚC ===
     if service_type_id:
         services = service_dao.get_services_by_type(service_type_id)
 
     if service_id:
-        # Có thể lọc bác sĩ theo chuyên khoa liên quan đến dịch vụ ở đây (nếu có quan hệ)
-        # Hiện tại lấy tất cả bác sĩ
         doctors = doctor_dao.get_all()
 
-    # === XỬ LÝ NGÀY GIỜ VÀ LỊCH TRỐNG ===
     if appt_date:
         appt_date = unquote(appt_date)
         try:
@@ -788,18 +731,15 @@ def add_appointment():
         except ValueError:
             err = "Định dạng ngày giờ không hợp lệ."
 
-    # === XỬ LÝ POST – ĐẶT LỊCH ===
     if request.method == "POST":
         data = request.form
 
-        # Lấy từ hidden fields (an toàn hơn args)
         patient_id_post = data.get("patient_id")
         service_id_post = data.get("service_id")
         doctor_id_post = data.get("doctor_id")
         schedule_id = data.get("schedule_id")
         description = data.get("description", "").strip()
 
-        # Validate đầy đủ các trường bắt buộc
         if not all([patient_id_post, service_id_post, doctor_id_post, schedule_id]):
             flash("Thiếu thông tin cần thiết để đặt lịch. Vui lòng thử lại từ đầu.", "danger")
             return redirect(url_for("add_appointment"))
@@ -813,7 +753,6 @@ def add_appointment():
             flash("Dữ liệu không hợp lệ.", "danger")
             return redirect(url_for("add_appointment"))
 
-        # Lấy object và kiểm tra tồn tại
         service = service_dao.get_service_by_id(service_id_post)
         doctor = doctor_dao.get_by_id(doctor_id_post)
 
@@ -825,10 +764,8 @@ def add_appointment():
             flash("Bác sĩ không tồn tại hoặc không khả dụng.", "danger")
             return redirect(url_for("add_appointment"))
 
-        # Tạo tên lịch hẹn
         name = f'Cuộc hẹn {service.name} với BS. {doctor.name}'
 
-        # Tạo appointment
         new_appointment = Appointment(
             name=name,
             patient_id=patient_id_post,
@@ -841,11 +778,10 @@ def add_appointment():
             flash("Đặt lịch hẹn thành công!", "success")
         except Exception as e:
             flash("Có lỗi khi lưu lịch hẹn. Vui lòng thử lại.", "danger")
-            print(e)  # Để debug, sau này thay bằng logger
+            print(e)
 
         return redirect(url_for("appointments"))
 
-    # === RENDER TEMPLATE (GET) ===
     return render_template(
         "appointment/appointment_add.html",
         patients=patients,
@@ -858,7 +794,7 @@ def add_appointment():
         selected_patient=patient_id,
         available_schedules=available_schedules,
         fm_datetime=datetime_obj_str,
-        selected_datetime=appt_date,  # dùng cho hidden field nếu cần
+        selected_datetime=appt_date,
         err=err
     )
 
@@ -874,7 +810,7 @@ def edit_appointment(id):
         appointment.doctor_id = int(data["doctor_id"])
         appointment.appointment_date = data["appointment_date"]
         appointment.description = data.get("description", "")
-        appointment_dao.update(appointment)  # ✅ dùng DAO update
+        appointment_dao.update(appointment)
         return redirect(url_for("appointments"))
     return render_template("appointment/appointment_edit.html", appointment=appointment, patients=patients, doctors=doctors)
 
@@ -891,11 +827,9 @@ def appointment_medicine(id):
 def add_appointment_medicine(id):
     medicines = medicine_dao.get_all_medicines()
     if request.method == "POST":
-        # Get data from form
         medicine_id = request.form.get("medicine_id", type=int)
-        quantity = request.form.get("quantity", 1, type=int)  # Default to 1 if not provided
+        quantity = request.form.get("quantity", 1, type=int)
 
-        # Add medicine to bill
         bill_dao.add_bill_medicine(bill_id=id, medicine_id=medicine_id, quantity=quantity)
 
         return redirect(url_for("appointment_medicine", id=id))
@@ -905,13 +839,11 @@ def add_appointment_medicine(id):
 @app.route("/appointment/<int:appointment_id>/medicine/edit/<int:medicine_id>", methods=["GET", "POST"])
 @login_required(RoleEnum.DOCTOR.value)
 def edit_appointment_medicine(appointment_id, medicine_id):
-    # Get the bill for this appointment
     bill = bill_dao.get_by_id(appointment_id)
     bill_medicine = bill_dao.get_bill_medicine(bill_id=bill.id, medicine_id=medicine_id)
     medicines = medicine_dao.get_all_medicines()
 
     if request.method == "POST":
-        # Get data from form
         medicine_id = request.form.get("medicine_id", type=int)
         quantity = request.form.get("quantity", 1, type=int)
 
@@ -971,13 +903,13 @@ def edit_service_type(id):
 @app.route("/service-type/delete/<int:id>")
 @login_required(RoleEnum.ADMIN.value)
 def delete_service_type(id):
-    serviceType_dao.soft_delete(id)  # DAO tự flash thông báo chi tiết
+    serviceType_dao.soft_delete(id)
     return redirect(url_for("serviceTypes"))
 
 @app.route("/services")
 @login_required()
 def services():
-    filter_by = request.args.get("filter_by", "name")  # Mặc định filter theo "name"
+    filter_by = request.args.get("filter_by", "name")
     keyword = request.args.get("keyword", "").strip()
     if keyword:
         all_services = service_dao.search(filter_by, keyword)
@@ -1009,7 +941,7 @@ def edit_service(id):
         service.name = data["name"]
         service.service_type_id = int(data["service_type_id"])
         service.price = float(data["price"])
-        service_dao.update_service(service)  # ✅ dùng DAO update
+        service_dao.update_service(service)
         flash("Cập nhật dịch vụ thành công!")
         return redirect(url_for("services"))
     return render_template("service/service_edit.html", service=service, types=types)
@@ -1046,7 +978,7 @@ def add_medicine_type():
 @app.route("/medicine-type/edit/<int:id>", methods=["GET", "POST"])
 @login_required(RoleEnum.ADMIN.value)
 def edit_medicine_type(id):
-    type_to_edit = medicineType_dao.get_by_id(id)  # dùng instance đã init sẵn
+    type_to_edit = medicineType_dao.get_by_id(id)
 
     if not type_to_edit:
         flash("Loại thuốc không tồn tại!")
@@ -1101,7 +1033,7 @@ def edit_medicine(id):
         medicine.name = data["name"]
         medicine.medicine_type_id = int(data["medicine_type_id"])
         medicine.price = float(data["price"])
-        medicine_dao.update_medicine(medicine)  # ✅ dùng DAO update
+        medicine_dao.update_medicine(medicine)
         flash("Cập nhật thuốc thành công!")
         return redirect(url_for("medicines"))
     return render_template("medicine/medicine.html", medicine=medicine, types=types)
@@ -1209,12 +1141,12 @@ def pay_bill(id):
         flash("Hóa đơn không tồn tại!", "danger")
         return redirect(url_for("bills"))
 
-    test_amount = 10000  # Để test MoMo sandbox
+    test_amount = 10000
 
     if request.method == "POST":
-        payment_method = request.form.get("payment_method")  # Chỉ lấy khi POST
+        payment_method = request.form.get("payment_method")
 
-        amount = test_amount  # Chế độ test
+        amount = test_amount
 
         if payment_method == "cash":
             bill_dao.update_status(bill.id, "Đã thanh toán", "cash")
@@ -1230,7 +1162,6 @@ def pay_bill(id):
             order_id = str(uuid.uuid4())
             request_id = str(uuid.uuid4())
 
-            # THỨ TỰ ĐÚNG - BẮT ĐẦU BẰNG accessKey
             raw_signature = (
                 f"accessKey={MOMO_ACCESS_KEY}"
                 f"&amount={amount}"

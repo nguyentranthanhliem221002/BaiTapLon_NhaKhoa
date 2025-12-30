@@ -9,10 +9,10 @@ class Doctor(Base):
 
     name = Column(String(100), nullable=False)
     phone = Column(String(20), nullable=False)
-    image = Column(String(200), default="")  # thêm cột lưu tên file ảnh
+    image = Column(String(200), default="")
     specialty_id = Column(Integer, ForeignKey("specialty.id"), default=1)
     user_id = Column(Integer, ForeignKey('users.id'), default=2)
-    role_id = Column(Integer, ForeignKey("roles.id"), default=RoleEnum.DOCTOR.value) #2. doctor
+    role_id = Column(Integer, ForeignKey("roles.id"), default=RoleEnum.DOCTOR.value)
     status = Column(Integer, default=0)
 
     schedules = relationship("Schedule", back_populates="doctor")

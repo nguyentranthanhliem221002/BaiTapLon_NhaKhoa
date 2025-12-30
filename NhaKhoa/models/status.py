@@ -19,5 +19,4 @@ class Status(Base):
     name = Column(String(50), nullable=False, unique=True)
     description = Column(String(255))
 
-    # Relationship to Bill
     bills = relationship("Bill", back_populates="status")

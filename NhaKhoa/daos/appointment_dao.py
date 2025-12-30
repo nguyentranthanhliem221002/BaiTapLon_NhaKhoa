@@ -12,7 +12,6 @@ from NhaKhoa.daos.bill_dao import BillDAO as bill_dao
 
 class AppointmentDAO:
     def __init__(self):
-        # Initialize BillDAO as an instance variable
         self.bill_dao = bill_dao()
 
     def get_all(self):
@@ -37,17 +36,6 @@ class AppointmentDAO:
             ) \
                 .all()
 
-    # def get_all_with_doctor_names(self):
-    #     """Returns Appointment objects with all relationships preloaded."""
-    #     with get_session() as session:
-    #         pass
-    #     return session.query(Appointment) \
-    #         .options(
-    #         joinedload(Appointment.patient),  # Load patient
-    #         joinedload(Appointment.schedule)  # Load schedule
-    #         .joinedload(Schedule.doctor)  # Load doctor through schedule
-    #     ) \
-    #         .all()
     def get_all_with_doctor_names(self):
         with get_session() as session:
             return session.query(Appointment) \
@@ -100,7 +88,7 @@ class AppointmentDAO:
                 .options(
                 joinedload(Appointment.patient),
                 joinedload(Appointment.schedule).joinedload(Schedule.doctor),
-                joinedload(Appointment.bill)  # ← QUAN TRỌNG: Preload bill để dùng appt.bill an toàn
+                joinedload(Appointment.bill)
             ) \
                 .filter(
                 Appointment.patient_id == patient_id,

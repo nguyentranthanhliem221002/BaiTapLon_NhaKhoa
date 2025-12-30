@@ -1,52 +1,5 @@
-# from NhaKhoa.models.doctor import Doctor
-# from NhaKhoa.database.db import get_session
-#
-# class DoctorDAO:
-#     def get_all(self):
-#         with get_session() as session:
-#             return session.query(Doctor).all()
-#
-#     def get_by_id(self, id: int):
-#         with get_session() as session:
-#             return session.get(Doctor, id)
-#
-#     def add(self, doctor: Doctor):
-#         with get_session() as session:
-#             session.add(doctor)
-#             session.commit()
-#
-#     def update(self, doctor: Doctor):
-#         with get_session() as session:
-#             session.add(doctor)
-#             session.commit()
-#
-#     def delete(self, id: int):
-#         with get_session() as session:
-#             doctor = session.get(Doctor, id)
-#             if doctor:
-#                 session.delete(doctor)
-#                 session.commit()
-#
-#     def search(self, filter_by: str, keyword: str):
-#         with get_session() as session:
-#             query = session.query(Doctor)
-#             if filter_by == "name":
-#                 query = query.filter(Doctor.name.ilike(f"%{keyword}%"))
-#             elif filter_by == "specialty":
-#                 query = query.filter(Doctor.specialty.ilike(f"%{keyword}%"))
-#             elif filter_by == "phone":
-#                 query = query.filter(Doctor.phone.ilike(f"%{keyword}%"))
-#             return query.all()
-#
-#     def update(self, doctor: Doctor):
-#         with get_session() as session:
-#             session.merge(doctor)
-#             session.commit()
-
-from sqlalchemy import false
-
 from NhaKhoa.models.doctor import Doctor
-from NhaKhoa.models.specialty import Specialty  # Import Specialty nếu chưa có
+from NhaKhoa.models.specialty import Specialty
 from NhaKhoa.database.db import get_session
 from sqlalchemy.orm import joinedload
 

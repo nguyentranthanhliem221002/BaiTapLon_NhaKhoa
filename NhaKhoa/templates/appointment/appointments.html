@@ -73,13 +73,12 @@
         const filter = document.getElementById('filter_by').value;
         const input = document.getElementById('keyword_input');
         if(filter === 'date') {
-            input.type = 'date';  // calendar picker
+            input.type = 'date';
         } else {
             input.type = 'text';
         }
     }
 
-    // Khởi tạo khi load trang
     window.onload = toggleKeywordInput;
 </script>
 {% endblock %}

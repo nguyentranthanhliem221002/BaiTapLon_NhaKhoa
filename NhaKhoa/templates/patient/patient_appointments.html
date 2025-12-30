@@ -7,7 +7,6 @@
 
     <div id="calendar"></div>
 
-    <!-- Modal chi tiết cuộc hẹn (giữ nguyên) -->
     <div class="modal fade" id="eventModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -27,7 +26,6 @@
         </div>
     </div>
 
-    <!-- Modal đặt lịch hẹn mới - CHỈ CHỌN GIỜ (đã bỏ ngày) -->
     <div class="modal fade" id="createModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -39,7 +37,6 @@
                     <form id="appointmentForm">
                         <input type="hidden" id="selected_date" value="">
 
-                        <!-- Loại dịch vụ -->
                         <div class="mb-3">
                             <label class="form-label">Loại dịch vụ <span class="text-danger">*</span></label>
                             <select class="form-select" id="service_type_id" required>
@@ -50,13 +47,11 @@
                             </select>
                         </div>
 
-                        <!-- Dịch vụ cụ thể -->
                         <div class="mb-3" id="serviceContainer" style="display:none;">
                             <label class="form-label">Dịch vụ <span class="text-danger">*</span></label>
                             <select class="form-select" id="service_id" required></select>
                         </div>
 
-                        <!-- Bác sĩ -->
                         <div class="mb-3" id="doctorContainer" style="display:none;">
                             <label class="form-label">Bác sĩ <span class="text-danger">*</span></label>
                             <select class="form-select" id="doctor_id" required>
@@ -64,15 +59,15 @@
                             </select>
                         </div>
 
-                        <!-- Khung giờ có sẵn (giờ hiển thị luôn khi chọn bác sĩ) -->
+
                         <div class="mb-3" id="scheduleContainer" style="display:none;">
+
                             <label class="form-label">Chọn khung giờ <span class="text-danger">*</span></label>
                             <select class="form-select" id="schedule_id" required>
                                 <option value="">-- Chọn khung giờ --</option>
                             </select>
                         </div>
 
-                        <!-- Mô tả -->
                         <div class="mb-3">
                             <label class="form-label">Mô tả triệu chứng / yêu cầu</label>
                             <textarea class="form-control" id="description" rows="3"></textarea>
@@ -90,7 +85,6 @@
         </div>
     </div>
 
-    <!-- Modal thông báo thành công -->
     <div class="modal fade" id="successModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -111,7 +105,6 @@
         </div>
     </div>
 
-    <!-- Modal thông báo đã có lịch -->
     <div class="modal fade" id="duplicateModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -135,7 +128,6 @@
     </div>
 
 
-<!-- FullCalendar CSS & JS -->
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css' rel='stylesheet' />
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
 
@@ -148,7 +140,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');
-    let selectedDate = null; // lưu ngày được click trên lịch
+    let selectedDate = null;
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
@@ -162,18 +154,15 @@ document.addEventListener('DOMContentLoaded', function() {
             new bootstrap.Modal(document.getElementById('eventModal')).show();
         },
         dateClick: function(info) {
-            // Khi click vào ngày → lưu ngày + mở modal
-            selectedDate = info.dateStr; // "2025-12-19"
+            selectedDate = info.dateStr;
             document.getElementById('selected_date').value = selectedDate;
             new bootstrap.Modal(document.getElementById('createModal')).show();
-            resetForm(); // reset các field
+            resetForm();
         }
     });
     calendar.render();
 
 
-
-    // Reset form khi mở modal
     function resetForm() {
         document.getElementById('service_type_id').value = '';
         document.getElementById('service_id').innerHTML = '<option value="">-- Chọn dịch vụ --</option>';
@@ -185,7 +174,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('scheduleContainer').style.display = 'none';
     }
 
-    // Load dịch vụ + bác sĩ khi chọn loại dịch vụ
     document.getElementById('service_type_id').addEventListener('change', function() {
         const typeId = this.value;
         const serviceSelect = document.getElementById('service_id');
@@ -199,7 +187,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!typeId) return;
 
-        // Load dịch vụ
         fetch(`/api/services_by_type/${typeId}`)
             .then(res => res.json())
             .then(services => {
@@ -212,7 +199,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('serviceContainer').style.display = 'block';
             });
 
-        // Load bác sĩ theo loại dịch vụ
         fetch(`/api/doctors_by_service_type/${typeId}`)
             .then(res => res.json())
             .then(doctors => {
@@ -230,7 +216,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
 
-    // Khi chọn bác sĩ → load khung giờ của ngày đã chọn
     document.getElementById('doctor_id').addEventListener('change', function() {
         const doctorId = this.value;
         if (!doctorId || !selectedDate) return;
@@ -260,7 +245,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
 
-    // Submit form
     document.getElementById('appointmentForm').addEventListener('submit', function(e) {
         e.preventDefault();
         if (!selectedDate) {
@@ -295,17 +279,14 @@ document.addEventListener('DOMContentLoaded', function() {
             extendedProps: { description: formData.description }
         });
 
-        // Đóng modal tạo lịch
         bootstrap.Modal.getInstance(
             document.getElementById('createModal')
         ).hide();
 
-        // 👉 Mở modal thành công
         new bootstrap.Modal(
             document.getElementById('successModal')
         ).show();
     } else {
-            // Nếu backend báo đã có lịch
         if (data.message && data.message.includes("đã có lịch")) {
             new bootstrap.Modal(
                 document.getElementById('duplicateModal')

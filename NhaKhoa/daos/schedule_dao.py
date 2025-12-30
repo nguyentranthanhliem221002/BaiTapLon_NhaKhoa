@@ -57,11 +57,9 @@ class ScheduleDAO:
         Filters a list of available schedules by selected datetime (±1 hour).
         Returns filtered schedules (empty list if out of working hours).
         """
-        # Skip if out of working hours (10:00-17:00)
         if not (9 <= selected_datetime.hour < 16):
             return []
 
-        # Filter by time range: same date, same hour or next hour
         selected_date = selected_datetime.date()
         selected_hour = selected_datetime.hour
         return [
