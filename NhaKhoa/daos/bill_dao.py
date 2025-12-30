@@ -24,9 +24,22 @@ class BillDAO:
             ) \
                 .all()
 
+    # def get_by_id(self, bill_id: int):
+    #     with get_session() as session:
+    #         return session.get(Bill, bill_id)
     def get_by_id(self, bill_id: int):
         with get_session() as session:
-            return session.get(Bill, bill_id)
+            return session.query(Bill) \
+                .options(
+                joinedload(Bill.status),
+                joinedload(Bill.appointment)
+                .joinedload(Appointment.patient),
+                joinedload(Bill.appointment)
+                .joinedload(Appointment.schedule)
+                .joinedload(Schedule.doctor)
+            ) \
+                .filter(Bill.id == bill_id) \
+                .first()
 
     def get_by_order_id(self, order_id: str):
         with get_session() as session:

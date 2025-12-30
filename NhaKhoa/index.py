@@ -7,7 +7,7 @@ from functools import wraps
 import bcrypt
 import requests, json, uuid, hashlib, hmac
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,date
 import requests
 import json
 from werkzeug.utils import secure_filename
@@ -31,20 +31,20 @@ from daos.service_dao import ServiceDAO
 from daos.serviceType_dao import ServiceTypeDAO
 from daos.medicine_dao import MedicineDAO
 from daos.medicineType_dao import MedicineTypeDAO
+from daos.thongke_dao import ThongKeDAO
 
 from NhaKhoa.models.user import User
 from NhaKhoa.models.patient import Patient
 from NhaKhoa.models.doctor import Doctor
 from NhaKhoa.models.appointment import Appointment
 
-MOMO_PARTNER_CODE = "MOMO5RGX20191128"       # Partner code của bạn
-MOMO_ACCESS_KEY = "M8brj9K6E22vXoDB"   # Access key
-MOMO_SECRET_KEY = "nqQiVSgDMy809JoPF6OzP5OdBUB550Y4"   # Secret key
+MOMO_PARTNER_CODE = "MOMO5RGX20191128"
+MOMO_ACCESS_KEY = "M8brj9K6E22vXoDB"
+MOMO_SECRET_KEY = "nqQiVSgDMy809JoPF6OzP5OdBUB550Y4"
 MOMO_ENDPOINT = "https://test-payment.momo.vn/v2/gateway/api/create"
 MOMO_RETURN_URL = "http://127.0.0.1:5000/bill/momo_return"
 MOMO_NOTIFY_URL = "http://127.0.0.1:5000/bill/momo_notify"
 
-# CONFIG FLASK-MAIL
 app.config.update(
     MAIL_SERVER='smtp.gmail.com',
     MAIL_PORT=587,
@@ -54,7 +54,6 @@ app.config.update(
 )
 mail = Mail(app)
 
-# GOOGLE OAUTH CONFIG
 GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"
 GOOGLE_CLIENT_SECRET = "YOUR_GOOGLE_CLIENT_SECRET"
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
@@ -78,7 +77,7 @@ def login_required(*roles):
         return decorated_function
     return decorator
 
-# INIT DAO
+
 user_dao = UserDAO()
 patient_dao = PatientDAO()
 doctor_dao = DoctorDAO()
@@ -90,7 +89,7 @@ medicine_dao = MedicineDAO()
 medicineType_dao = MedicineTypeDAO()
 specialty_dao = SpecialtyDAO()
 schedule_dao = ScheduleDAO()
-
+thongke_dao = ThongKeDAO()
 @app.context_processor
 def inject_role_enum():
     return dict(RoleEnum=RoleEnum)
@@ -294,7 +293,7 @@ def add_patient():
             age=int(data["age"]),
             phone=data["phone"],
             address=data["address"],
-            status=0   # QUAN TRỌNG
+            status=0
         )
 
         # Upload ảnh
@@ -406,38 +405,6 @@ def appointments_events():
         })
 
     return jsonify(events)
-#
-# @app.route("/my_appointments")
-# @login_required(RoleEnum.USER.value, RoleEnum.PATIENT.value)
-# def my_appointments():
-#     user = user_dao.get_by_id(session.get("user_id"))
-#     patient = patient_dao.get_by_user_id(user.id)
-#     if not patient:
-#         flash("Bệnh nhân không tồn tại!", "danger")
-#         return redirect(url_for("dashboard"))
-#
-#     service_types = serviceType_dao.get_all_service_types()
-#
-#     appointments = appointment_dao.get_by_patient_id(patient.id)
-#
-#     events = []
-#     for appt in appointments:
-#         doctor_name = appt.schedule.doctor.name if appt.schedule and appt.schedule.doctor else "Chưa xác định"
-#         events.append({
-#             "id": appt.id,
-#             "title": doctor_name,
-#             "start": appt.schedule.from_date.isoformat() if appt.schedule else "",
-#             "extendedProps": {
-#                 "description": appt.description or "Không có mô tả"
-#             }
-#         })
-#
-#     return render_template(
-#         "patient/patient_appointments.html",
-#         events=events,
-#         service_types=service_types,
-#         patient_id=patient.id
-#     )
 
 @app.route("/my_appointments")
 @login_required(RoleEnum.USER.value, RoleEnum.PATIENT.value)
@@ -1107,19 +1074,15 @@ def bills():
     user_id = session.get("user_id")
     role = session.get("role")
 
-    # Bảo vệ thêm (dù decorator đã kiểm tra)
     if not user_id or role is None:
         flash("Vui lòng đăng nhập lại.", "danger")
         return redirect(url_for("login"))
 
-    # Chuẩn hóa role một lần
     role_norm = role.lower() if isinstance(role, str) else role
 
-    # Lấy tất cả bill (đã preload relationship)
     all_bills = bill_dao.get_all()
     bills = []
 
-    # === Phân quyền lấy dữ liệu ===
     if role_norm in [RoleEnum.ADMIN.value, "admin"]:
         bills = all_bills
 
@@ -1140,7 +1103,6 @@ def bills():
         if not bills:
             flash("Bạn chưa có hóa đơn nào từ bệnh nhân.", "info")
 
-    # === Tìm kiếm & lọc ===
     filter_by = request.args.get("filter_by")
     keyword = request.args.get("keyword", "").strip().lower()
 
@@ -1171,112 +1133,26 @@ def add_bill(appointment_id):
         return redirect(url_for("bills"))
     return render_template("bill/bill_add.html", appointment=appointment)
 
-# @app.route("/bill/pay/<int:id>", methods=["GET","POST"])
-# @login_required()
-# def pay_bill(id):
-#     bill = bill_dao.get_by_id(id)
-#     if not bill:
-#         flash("Hóa đơn không tồn tại!")
-#         return redirect(url_for("bills"))
-#     if request.method == "POST":
-#         payment_method = request.form["payment_method"]
-#         bill_dao.update_status(bill.id, "Đã thanh toán", payment_method)
-#         flash("Thanh toán thành công!")
-#         return redirect(url_for("bills"))
-#     return render_template("bill/bill_pay.html", bill=bill)
+@app.route("/thongke/thongke")
+@login_required(RoleEnum.ADMIN.value)
+def thongke():
+    selected_date = request.args.get("date", date.today().isoformat())
+    selected_doctor_id = request.args.get("doctor_id", type=int)
 
+    stats = thongke_dao.thong_ke_theo_ngay(
+        selected_date,
+        selected_doctor_id
+    )
 
-# @app.route("/bill/pay/<int:id>", methods=["GET", "POST"])
-# @login_required()
-# def pay_bill(id):
-#     bill = bill_dao.get_by_id(id)
-#     if not bill:
-#         flash("Hóa đơn không tồn tại!", "danger")
-#         return redirect(url_for("bills"))
-#
-#     # Tính lại tổng tiền nếu có dịch vụ/thuốc (nếu bạn đã thêm recalculate_total)
-#     # bill_dao.recalculate_total(id)  # Uncomment nếu đã có hàm này
-#     # bill = bill_dao.get_by_id(id)  # Reload lại bill
-#
-#     if request.method == "POST":
-#         payment_method = request.form.get("payment_method")
-#
-#         try:
-#             amount = int(round(bill.total))
-#             if amount <= 0:
-#                 flash("Tổng tiền hóa đơn là 0đ. Vui lòng thêm dịch vụ/thuốc trước khi thanh toán!", "warning")
-#                 return redirect(url_for("bills"))
-#         except (TypeError, ValueError):
-#             flash("Lỗi định dạng số tiền hóa đơn!", "danger")
-#             return redirect(url_for("bills"))
-#
-#         if payment_method == "cash":
-#             bill_dao.update_status(bill.id, "Đã thanh toán", "cash")
-#             flash("Thanh toán thành công bằng tiền mặt!", "success")
-#             return redirect(url_for("bills"))
-#
-#         elif payment_method == "momo":
-#             import uuid
-#             import hmac
-#             import hashlib
-#
-#             order_id = str(uuid.uuid4())
-#             request_id = str(uuid.uuid4())
-#
-#             # Thứ tự param CHÍNH XÁC theo tài liệu MoMo
-#             raw_signature = (
-#                 f"accessKey={MOMO_ACCESS_KEY}"
-#                 f"&amount={amount}"
-#                 f"&extraData="
-#                 f"&ipnUrl={MOMO_NOTIFY_URL}"
-#                 f"&orderId={order_id}"
-#                 f"&orderInfo=Thanh toán hóa đơn nha khoa #{bill.id}"
-#                 f"&partnerCode={MOMO_PARTNER_CODE}"
-#                 f"&redirectUrl={MOMO_RETURN_URL}"
-#                 f"&requestId={request_id}"
-#                 f"&requestType=captureWallet"
-#             )
-#
-#             signature = hmac.new(MOMO_SECRET_KEY.encode(), raw_signature.encode(), hashlib.sha256).hexdigest()
-#
-#             payload = {
-#                 "partnerCode": MOMO_PARTNER_CODE,
-#                 "accessKey": MOMO_ACCESS_KEY,
-#                 "requestId": request_id,
-#                 "amount": str(amount),
-#                 "orderId": order_id,
-#                 "orderInfo": f"Thanh toán hóa đơn nha khoa #{bill.id}",
-#                 "redirectUrl": MOMO_RETURN_URL,
-#                 "ipnUrl": MOMO_NOTIFY_URL,
-#                 "extraData": "",
-#                 "requestType": "captureWallet",
-#                 "signature": signature
-#             }
-#
-#             try:
-#                 response = requests.post(MOMO_ENDPOINT, json=payload, timeout=10)
-#                 res_json = response.json()
-#                 print("MoMo API Response:", res_json)  # Debug quan trọng!
-#
-#                 if res_json.get("payUrl") and str(res_json.get("resultCode")) == "0":
-#                     # Lưu tạm order_id và phương thức
-#                     bill.order_id = order_id
-#                     bill.payment_method = "momo"
-#                     bill_dao.update(bill)
-#                     return redirect(res_json["payUrl"])
-#                 else:
-#                     error_msg = res_json.get("message", "Lỗi không xác định")
-#                     error_code = res_json.get("resultCode", "Unknown")
-#                     flash(f"Thanh toán MoMo thất bại [{error_code}]: {error_msg}", "danger")
-#                     return redirect(url_for("pay_bill", id=id))
-#
-#             except requests.exceptions.RequestException as e:
-#                 flash(f"Lỗi kết nối MoMo: {str(e)}", "danger")
-#                 return redirect(url_for("pay_bill", id=id))
-#
-#     # GET: hiển thị form
-#     return render_template("bill/bill_pay.html", bill=bill)
+    doctors = doctor_dao.get_all()
 
+    return render_template(
+        "thongke/thongkes.html",
+        stats=stats,
+        selected_date=selected_date,
+        doctors=doctors,
+        selected_doctor_id=selected_doctor_id
+    )
 @app.route("/bill/pay/<int:id>", methods=["GET", "POST"])
 @login_required()
 def pay_bill(id):

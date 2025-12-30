@@ -1,16 +1,52 @@
-<h2>Thanh toán phiếu khám #{{ bill.id }}</h2>
-<p>Bệnh nhân: {{ bill.patient_name }}</p>
-<p>Bác sĩ: {{ bill.doctor_name }}</p>
-<p>Mô tả: {{ bill.description }}</p>
-<p>Số tiền: {{ bill.amount }}</p>
+{% extends "layouts/base.html" %}
 
-<form method="POST">
-    <label>Chọn phương thức thanh toán:</label>
-    <select name="payment_method">
-        <option value="cash">Tiền mặt</option>
-        <option value="momo">Momo</option>
-    </select>
-    <button type="submit">Thanh toán</button>
+{% block title %}Thanh toán phiếu khám{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Thanh toán phiếu khám #{{ bill.id }}</h2>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <p>
+            <b>Bệnh nhân:</b>
+            {{ bill.appointment.patient.name }}
+        </p>
+
+        <p>
+            <b>Bác sĩ:</b>
+            {{ bill.appointment.schedule.doctor.name }}
+        </p>
+
+        <p>
+            <b>Mô tả:</b>
+            {{ bill.appointment.description or "Không có" }}
+        </p>
+
+        <p>
+            <b>Số tiền:</b>
+            <span class="text-danger fw-bold">
+                {{ "{:,.0f}".format(bill.total or 0) }} VNĐ
+            </span>
+        </p>
+    </div>
+</div>
+
+<form method="POST" class="card p-4">
+    <div class="mb-3">
+        <label class="form-label"><b>Phương thức thanh toán</b></label>
+        <select name="payment_method" class="form-select" required>
+            <option value="cash">Tiền mặt</option>
+            <option value="momo">MoMo</option>
+        </select>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success">
+            💳 Thanh toán
+        </button>
+        <a href="{{ url_for('bills') }}" class="btn btn-secondary">
+            ⬅ Quay lại
+        </a>
+    </div>
 </form>
-
-<a href="{{ url_for('bills') }}">Quay lại</a>
+{% endblock %}
