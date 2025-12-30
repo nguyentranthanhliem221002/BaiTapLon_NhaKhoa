@@ -54,7 +54,8 @@ class BillDAO:
     def get_all_medicines_by_bill_id(self, bill_id: int):
         with (get_session() as session):
             return session.query(BillMedicine) \
-            .filter(BillMedicine.bill_id == bill_id) \
+            .filter(BillMedicine.bill_id == bill_id,
+            BillMedicine.active == True) \
             .options(joinedload(BillMedicine.medicine)) \
             .all()
 
@@ -79,6 +80,20 @@ class BillDAO:
     def update(self, bill: Bill):
         with get_session() as session:
             session.merge(bill)
+            session.commit()
+
+    def delete_medicine(self, bill_medicine: BillMedicine):
+        with get_session() as session:
+            status = False
+            bill_medicine.active = status
+            session.merge(bill_medicine)
+            session.commit()
+
+    def restore_medicine(self, bill_medicine: BillMedicine):
+        with get_session() as session:
+            status = True
+            bill_medicine.active = status
+            session.merge(bill_medicine)
             session.commit()
 
     def update_status(self, bill_id: int, status_name: str, payment_method: str = None):
@@ -140,10 +155,15 @@ class BillDAO:
 
             if bill_medicine:
                 if bill_medicine.medicine_id == medicine_id:
+                    if bill_medicine.active == False:
+                        self.restore_medicine(bill_medicine=bill_medicine)
+
                     # Update existing record
-                    if bill_medicine.quantity != quantity:
+                    if bill_medicine.quantity != quantity and quantity != 0:
                         bill_medicine.quantity = quantity  # Add to existing quantity
                         bill_medicine.price = medicine.price * bill_medicine.quantity  # Update price
+                    elif quantity < 1:
+                        self.delete_medicine(bill_medicine)
 
             else:
                 # Create new record
@@ -160,9 +180,9 @@ class BillDAO:
             bill = session.get(Bill, bill_id)
             if bill:
                 # Calculate new total (sum of all bill services and medicines)
-                total = session.query(func.sum(BillService.price)).filter(BillService.bill_id == bill_id).scalar() or 0
+                total = session.query(func.sum(BillService.price)).filter(BillService.bill_id == bill_id, BillService.active == True).scalar() or 0
                 total += session.query(func.sum(BillMedicine.price * BillMedicine.quantity)).filter(
-                    BillMedicine.bill_id == bill_id).scalar() or 0
+                    BillMedicine.bill_id == bill_id, BillMedicine.active == True).scalar() or 0
                 bill.total = total
 
             session.commit()

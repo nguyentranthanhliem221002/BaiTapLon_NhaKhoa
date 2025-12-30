@@ -934,6 +934,28 @@ def add_appointment_medicine(id):
 
     return render_template("appointment/medicine_add.html", id=id, medicines=medicines)
 
+@app.route("/appointment/<int:appointment_id>/medicine/edit/<int:medicine_id>", methods=["GET", "POST"])
+@login_required(RoleEnum.DOCTOR.value)
+def edit_appointment_medicine(appointment_id, medicine_id):
+    # Get the bill for this appointment
+    bill = bill_dao.get_by_id(appointment_id)
+    bill_medicine = bill_dao.get_bill_medicine(bill_id=bill.id, medicine_id=medicine_id)
+    medicines = medicine_dao.get_all_medicines()
+
+    if request.method == "POST":
+        # Get data from form
+        medicine_id = request.form.get("medicine_id", type=int)
+        quantity = request.form.get("quantity", 1, type=int)
+
+        bill_dao.add_bill_medicine(bill_id=bill.id, medicine_id=medicine_id, quantity=quantity)
+        return redirect(url_for('appointment_medicine', id=appointment_id))
+
+    return render_template("appointment/medicine_edit.html",
+                           appointment_id=appointment_id,
+                           medicine_id=medicine_id,
+                           bill_medicine=bill_medicine,
+                           medicines=medicines)
+
 @app.route("/appointment/delete/<int:id>")
 @login_required(RoleEnum.ADMIN.value)
 def delete_appointment(id):

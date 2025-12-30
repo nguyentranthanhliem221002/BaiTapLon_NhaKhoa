@@ -44,7 +44,7 @@
         <td>{{ m.quantity }}</td>
         <td>{{ m.price }}</td>
         <td>
-            <a class="btn btn-primary btn-sm" href="{{ url_for('edit_appointment', id=m.id) }}">Sửa</a>
+            <a class="btn btn-primary btn-sm" href="/appointment/{{ bill_id }}/medicine/edit/{{ m.id }}">Sửa</a>
         </td>
     </tr>
     {% endfor %}
