@@ -2,21 +2,20 @@ from NhaKhoa.models.service import Service
 from NhaKhoa.models.serviceType import ServiceType
 from NhaKhoa.database.db import get_session
 
+
 class ServiceDAO:
     def get_all_services(self):
         with get_session() as session:
-            services = session.query(Service).all()
+            services = session.query(Service).filter(Service.active == True).all()
             for s in services:
                 s.type_name = s.service_type.name if s.service_type else "Chưa xác định"
             return services
 
-    def get_all_service_types(self):
-        with get_session() as session:
-            return session.query(ServiceType).all()
-
     def get_service_by_id(self, id: int):
         with get_session() as session:
-            service = session.get(Service, id)
+            service = session.query(Service) \
+                .filter(Service.id == id, Service.active == True) \
+                .first()
             if service:
                 service.type_name = service.service_type.name if service.service_type else "Chưa xác định"
             return service
@@ -34,10 +33,23 @@ class ServiceDAO:
             session.merge(service)
             session.commit()
 
-    def delete_service(self, service: Service):
+    def soft_delete(self, id: int):
         with get_session() as session:
-            session.delete(service)
-            session.commit()
+            service = session.get(Service, id)
+            if service and service.active == True:
+                service.active = False
+                session.commit()
+                return True
+            return False
+
+    def restore(self, id: int):
+        with get_session() as session:
+            service = session.get(Service, id)
+            if service and service.active == False:
+                service.active = True
+                session.commit()
+                return True
+            return False
 
     def add_service_type(self, name: str):
         with get_session() as session:
@@ -46,23 +58,19 @@ class ServiceDAO:
             session.commit()
             return type_obj
 
-    def update_service(self, service: Service):
-        """Cập nhật dịch vụ"""
-        with get_session() as session:
-            session.merge(service)  # merge để cập nhật object detached
-            session.commit()
-
     def search(self, filter_by: str, keyword: str):
         with get_session() as session:
-            query = session.query(Service)
+            query = session.query(Service).filter(Service.active == True)
             if filter_by == "name":
                 query = query.filter(Service.name.ilike(f"%{keyword}%"))
             elif filter_by == "type":
                 query = query.join(Service.service_type).filter(ServiceType.name.ilike(f"%{keyword}%"))
             return query.all()
 
-    def update_service(self, service: Service):
+    def get_services_by_type(self, type_id: int):
         with get_session() as session:
-            session.merge(service)
-            session.commit()
-
+            return session.query(Service) \
+                .filter(
+                    Service.service_type_id == type_id,
+                    Service.active == True
+                ).all()

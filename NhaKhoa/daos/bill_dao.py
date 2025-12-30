@@ -29,11 +29,15 @@ class BillDAO:
             ) \
                 .all()
 
-    def get_by_id(self, bill_id):
+    def get_by_id(self, bill_id: int):
         with get_session() as session:
             return session.get(Bill, bill_id)
 
-    def add(self, bill: Bill):
+    def get_by_order_id(self, order_id: str):
+        with get_session() as session:
+            return session.query(Bill).filter(Bill.order_id == order_id).first()
+
+    def get_by_appointment_id(self, appointment_id: int):
         with get_session() as session:
             return session.query(Bill).filter(Bill.appointment_id == appointment_id).first()
 

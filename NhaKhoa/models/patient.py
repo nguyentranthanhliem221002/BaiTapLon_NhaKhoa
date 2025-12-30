@@ -31,6 +31,7 @@ class Patient(Base):
     image = Column(String(255), default="")  # Thêm cột lưu đường dẫn ảnh
     user_id = Column(Integer, ForeignKey('users.id'), default=3) # theo db.py
     role_id = Column(Integer, ForeignKey("roles.id"), default=RoleEnum.PATIENT.value)
+    status = Column(Integer, default=0)
 
     appointments = relationship("Appointment", back_populates="patient", lazy=True)
     user = relationship('User', back_populates='patient')

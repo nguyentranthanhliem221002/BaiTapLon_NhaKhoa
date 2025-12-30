@@ -1,32 +1,49 @@
 {% extends "layouts/base.html" %}
-
 {% block title %}Thêm lịch hẹn{% endblock %}
-
 {% block content %}
 <div class="container mt-4" style="max-width: 600px;">
     <h2 class="mb-4">Thêm lịch hẹn mới</h2>
 
     <form method="GET" action="{{ url_for('add_appointment') }}">
-        <!-- Chọn bệnh nhân -->
-        <div class="mb-3" {% if session.get('role') != RoleEnum.PATIENT.value %}style="display: none;"{% endif %}>
+
+                    {% if session.get("role") == RoleEnum.PATIENT.value %}
+                    <!-- Chọn bệnh nhân (chỉ hiển thị cho nhân viên/admin) -->
+        <div class="mb-3" >
             <label for="patient_id" class="form-label">Bệnh nhân</label>
             <select class="form-select" id="patient_id" name="patient_id" required>
                 <option value="" disabled {% if not selected_patient %}selected{% endif %}>Chọn bệnh nhân</option>
                 {% for patient in patients %}
-                <option value="{{ patient.id }}"{% if patient.id == selected_patient %}selected{% endif %}>{{ patient.name }}</option>
+                <option value="{{ patient.id }}" {% if patient.id == selected_patient %}selected{% endif %}>{{ patient.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+                    {% endif %}
+
+        <!-- Chọn loại dịch vụ -->
+        <div class="mb-3">
+            <label for="service_type_id" class="form-label">Loại dịch vụ</label>
+            <select class="form-select" id="service_type_id" name="service_type_id" required onchange="this.form.submit()">
+                <option value="" disabled {% if not selected_service_type %}selected{% endif %}>Chọn loại dịch vụ</option>
+                {% for st in service_types %}
+                <option value="{{ st.id }}" {% if st.id == selected_service_type %}selected{% endif %}>{{ st.name }}</option>
                 {% endfor %}
             </select>
         </div>
 
+        {% if services %}
+        <!-- Chọn dịch vụ cụ thể -->
         <div class="mb-3">
-            <label for="specialty_id" class="form-label">Dịch vụ</label>
-            <select class="form-select" id="specialty_id" name="specialty_id" required onchange="this.form.submit()">
-                <option value="" disabled {% if not selected_specialty %}selected{% endif %}>Chọn dịch vụ</option>
-                {% for specialty in specialties %}
-                <option value="{{ specialty.id }}" {% if specialty.id == selected_specialty %}selected{% endif %}>{{ specialty.name }}</option>
+            <label for="service_id" class="form-label">Dịch vụ</label>
+            <select class="form-select" id="service_id" name="service_id" required onchange="this.form.submit()">
+                <option value="" disabled selected>Chọn dịch vụ</option>
+                {% for service in services %}
+                <option value="{{ service.id }}" {% if service.id == selected_service %}selected{% endif %}>
+                    {{ service.name }} ({{ service.price }}đ)
+                </option>
                 {% endfor %}
             </select>
         </div>
+        {% endif %}
 
         {% if doctors %}
         <!-- Chọn bác sĩ -->
@@ -40,6 +57,7 @@
             </select>
         </div>
         {% endif %}
+
         <!-- Ngày giờ hẹn -->
         <div class="mb-3">
             <label for="appointment_date" class="form-label">Ngày hẹn</label>
@@ -54,11 +72,10 @@
 
     {% if available_schedules %}
     <form method="POST" action="{{ url_for('add_appointment') }}" class="mt-3">
-        <!-- Schedule Selection -->
         <div class="mb-3">
             <label for="schedule_id" class="form-label">Lịch khám có sẵn</label>
             <select class="form-select" id="schedule_id" name="schedule_id" required>
-                <option value="" disabled selected>Chọn lịch khám</option>
+                <option value="" disabled selected>Chọn khung giờ</option>
                 {% for schedule in available_schedules %}
                 <option value="{{ schedule.id }}">
                     {{ schedule.from_date.strftime('%H:%M') }} - {{ schedule.to_date.strftime('%H:%M') }} | {{ schedule.from_date.strftime('%d/%m/%Y') }}
@@ -67,35 +84,25 @@
             </select>
         </div>
 
-        <!-- Description -->
         <div class="mb-3">
-            <label for="description" class="form-label">Mô tả</label>
-            <textarea class="form-select" id="description" name="description" rows="3"></textarea>
+            <label for="description" class="form-label">Mô tả triệu chứng / yêu cầu</label>
+            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
         </div>
 
-        <!-- Hidden fields for POST -->
+        <!-- Hidden fields -->
         <input type="hidden" name="patient_id" value="{{ selected_patient }}">
+        <input type="hidden" name="service_id" value="{{ selected_service }}">
         <input type="hidden" name="doctor_id" value="{{ selected_doctor }}">
-        <input type="hidden" name="appointment_date" value="{{ selected_datetime }}">
-
+        <input type="hidden" name="appointment_date" value="{{ fm_datetime }}">
         <div class="d-flex justify-content-between">
-            <button type="submit" class="btn btn-success">Thêm lịch hẹn</button>
+            <button type="submit" class="btn btn-success">Đặt lịch hẹn</button>
             <a href="{{ url_for('appointments') }}" class="btn btn-secondary">Hủy</a>
         </div>
     </form>
     {% endif %}
+
+    {% if err %}
+    <div class="alert alert-danger mt-3">{{ err }}</div>
+    {% endif %}
 </div>
 {% endblock %}
-<script>
-    function toggleDoctorDropdown() {
-        const specialtySelect = document.getElementById("specialty_id");
-        const doctorContainer = document.getElementById("doctor_container");
-
-        // Show the doctor dropdown if a specialty is selected
-        if (specialtySelect.value) {
-            doctorContainer.style.display = "block";
-        } else {
-            doctorContainer.style.display = "none";
-        }
-    }
-</script>

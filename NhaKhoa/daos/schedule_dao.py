@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime,date
 
 from sqlalchemy.orm import joinedload
-
+from sqlalchemy import func
 from NhaKhoa.database.db import get_session
 from NhaKhoa.models.schedule import Schedule
 
@@ -69,3 +69,14 @@ class ScheduleDAO:
             if s.from_date.date() == selected_date and
                (s.from_date.hour == selected_hour or s.from_date.hour == selected_hour + 1)
         ]
+
+    def get_available_schedules_by_doctor_and_date(self, doctor_id: int, selected_date: date):
+        with get_session() as session:
+            return session.query(Schedule) \
+                .filter(
+                Schedule.doctor_id == doctor_id,
+                func.date(Schedule.from_date) == selected_date,
+                Schedule.num_patient < Schedule.max_patient
+            ) \
+                .order_by(Schedule.from_date) \
+                .all()

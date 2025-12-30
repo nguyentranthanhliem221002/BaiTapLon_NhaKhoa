@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "layouts/base.html" %}
 {% block content %}
 <div class="container mt-4">
     <h2>Thêm loại dịch vụ</h2>
@@ -8,7 +8,7 @@
             <input type="text" name="name" class="form-control" required>
         </div>
         <button class="btn btn-success">Lưu</button>
-        <a href="{{ url_for('service_types') }}" class="btn btn-secondary">Hủy</a>
+        <a href="{{ url_for('serviceTypes') }}" class="btn btn-secondary">Hủy</a>
     </form>
 </div>
 {% endblock %}
