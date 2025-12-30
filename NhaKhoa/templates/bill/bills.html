@@ -27,7 +27,7 @@
             <th>ID</th>
             <th>Bệnh nhân</th>
             <th>Bác sĩ</th>
-            <th>Mô tả</th>
+<!--            <th>Mô tả</th>-->
             <th>Số tiền</th>
             <th>Trạng thái</th>
             <th>Thao tác</th>
@@ -45,7 +45,7 @@
                     {{ '' }}
                 {% endif %}
             </td>
-            <td>{{ bill.description or "" }}</td>
+<!--            <td>{{ bill.description or "" }}</td>-->
             <td>{{ "{:,.0f}".format(bill.total) }} đ</td>
             <td>{{ bill.status.name if bill.status else '' }}</td>
             <td>

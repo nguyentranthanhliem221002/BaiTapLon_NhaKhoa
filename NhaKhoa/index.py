@@ -1058,22 +1058,25 @@ def bills():
         flash("Vui lòng đăng nhập lại.", "danger")
         return redirect(url_for("login"))
 
-    role_norm = role.lower() if isinstance(role, str) else role
-
-    all_bills = bill_dao.get_all()
+    # Nếu role trong session là int (giá trị enum)
+    # So sánh trực tiếp với RoleEnum.value
     bills = []
 
-    if role_norm in [RoleEnum.ADMIN.value, "admin"]:
-        bills = all_bills
+    all_bills = bill_dao.get_all()
+    # Tính lại total cho từng bill
+    for b in all_bills:
+        bill_dao.recalculate_total(b.id)
 
-    elif role_norm in [RoleEnum.USER.value, RoleEnum.PATIENT.value, "user", "patient"]:
+    # Lọc hóa đơn theo role
+    if role == RoleEnum.ADMIN.value:
+        bills = all_bills
+    elif role in [RoleEnum.USER.value, RoleEnum.PATIENT.value]:
         patient = patient_dao.get_by_user_id(user_id)
         if patient:
             bills = [b for b in all_bills if b.appointment and b.appointment.patient_id == patient.id]
         if not bills:
             flash("Bạn chưa có hóa đơn nào.", "info")
-
-    elif role_norm in [RoleEnum.DOCTOR.value, "doctor"]:
+    elif role == RoleEnum.DOCTOR.value:
         doctor = doctor_dao.get_by_user_id(user_id)
         if doctor:
             bills = [
@@ -1083,9 +1086,9 @@ def bills():
         if not bills:
             flash("Bạn chưa có hóa đơn nào từ bệnh nhân.", "info")
 
+    # Lọc theo keyword nếu có
     filter_by = request.args.get("filter_by")
     keyword = request.args.get("keyword", "").strip().lower()
-
     if filter_by and keyword:
         def matches(bill):
             if filter_by == "patient_name" and bill.appointment and bill.appointment.patient:
@@ -1096,9 +1099,10 @@ def bills():
                 return keyword in bill.status.name.lower()
             return False
 
-        bills = [b for b in bills if matches(bill)]
+        bills = [b for b in bills if matches(b)]
 
     return render_template("bill/bills.html", bills=bills)
+
 @app.route("/bill/add/<int:appointment_id>", methods=["GET","POST"])
 @login_required(RoleEnum.ADMIN.value)
 def add_bill(appointment_id):
@@ -1141,16 +1145,18 @@ def pay_bill(id):
         flash("Hóa đơn không tồn tại!", "danger")
         return redirect(url_for("bills"))
 
-    test_amount = 10000
+    # Lấy tổng tiền từ bill thay vì gán cứng
+    total_amount = int(bill.total or 0)
+
 
     if request.method == "POST":
         payment_method = request.form.get("payment_method")
 
-        amount = test_amount
+        amount = total_amount
 
         if payment_method == "cash":
             bill_dao.update_status(bill.id, "Đã thanh toán", "cash")
-            flash(f"TEST: Thanh toán tiền mặt thành công! ({amount:,}đ)", "success")
+            flash(f"Thanh toán tiền mặt thành công! ({amount:,}đ)", "success")
             return redirect(url_for("bills"))
 
         elif payment_method == "momo":
@@ -1168,7 +1174,7 @@ def pay_bill(id):
                 f"&extraData="
                 f"&ipnUrl={MOMO_NOTIFY_URL}"
                 f"&orderId={order_id}"
-                f"&orderInfo=TEST - Hóa đơn #{bill.id}"
+                f"&orderInfo=Hóa đơn #{bill.id}"
                 f"&partnerCode={MOMO_PARTNER_CODE}"
                 f"&redirectUrl={MOMO_RETURN_URL}"
                 f"&requestId={request_id}"
@@ -1187,7 +1193,7 @@ def pay_bill(id):
                 "requestId": request_id,
                 "amount": str(amount),
                 "orderId": order_id,
-                "orderInfo": f"TEST - Hóa đơn #{bill.id}",
+                "orderInfo": f"Hóa đơn #{bill.id}",
                 "redirectUrl": MOMO_RETURN_URL,
                 "ipnUrl": MOMO_NOTIFY_URL,
                 "extraData": "",
@@ -1204,7 +1210,8 @@ def pay_bill(id):
                 if res_json.get("resultCode") == 0 and res_json.get("payUrl"):
                     bill.order_id = order_id
                     bill.payment_method = "momo"
-                    bill.total = amount
+                    # Lưu lại total từ bill, không gán cứng
+                    bill.total = total_amount
                     bill_dao.update(bill)
                     return redirect(res_json["payUrl"])
                 else:
@@ -1216,12 +1223,13 @@ def pay_bill(id):
                 flash(f"Lỗi kết nối MoMo: {str(e)}", "danger")
                 return redirect(url_for("pay_bill", id=id))
 
-    # GET request: chỉ hiển thị form, KHÔNG dùng payment_method ở đây
+    # GET request: hiển thị form với số tiền thực tế
     return render_template(
         "bill/bill_pay.html",
         bill=bill,
-        display_amount=test_amount
+        display_amount=bill.total
     )
+
 @app.route("/bill/momo_return")
 def momo_return():
     order_id = request.args.get("orderId")
