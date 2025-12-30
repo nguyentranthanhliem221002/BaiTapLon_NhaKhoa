@@ -10,88 +10,6 @@
     <link rel="stylesheet" href="../../static/style.css">
 </head>
 <body>
-<!--<header class="bg-light shadow-sm p-3">-->
-<!--    <div class="container d-flex justify-content-between align-items-center">-->
-<!--        <div class="d-flex align-items-center">-->
-<!--            &lt;!&ndash; Logo &ndash;&gt;-->
-<!--            <img src="{{ url_for('static', filename='images/icon_logo.png') }}"-->
-<!--                 alt="Logo" style="width:40px; height:40px; object-fit:cover; margin-right:10px;">-->
-<!--            <h1 class="h3 mb-0 me-4">-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('dashboard') }}">Phòng Khám Nha Khoa</a>-->
-<!--            </h1>-->
-<!--        </div>-->
-
-<!--        {% if session.get('user') %}-->
-<!--        <nav class="d-flex align-items-center flex-grow-1 justify-content-center">-->
-<!--            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('dashboard') }}">Trang chủ</a>-->
-
-<!--            {% if session['role'] == 'admin' %}-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('patients') }}">Bệnh nhân</a>-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('doctors') }}">Bác sĩ</a>-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn</a>-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('services') }}">Dịch vụ</a>-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('medicine_types') }}">Loại thuốc</a>-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('medicines') }}">Thuốc</a>-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>-->
-<!--            {% elif session['role'] == 'doctor' %}-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn</a>-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('patients') }}">Bệnh nhân</a>-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>-->
-<!--            {% elif session['role'] == 'patient' %}-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn của tôi</a>-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('doctors') }}">Bác sĩ</a>-->
-<!--                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn của tôi</a>-->
-<!--            {% endif %}-->
-<!--        </nav>-->
-<!--        {% endif %}-->
-
-<!--        <div class="d-flex align-items-center gap-2">-->
-<!--            &lt;!&ndash; Icon Search + Input tìm kiếm &ndash;&gt;-->
-<!--            <div class="dropdown">-->
-<!--                <a class="d-flex align-items-center" href="#" data-bs-toggle="dropdown" aria-expanded="false">-->
-<!--                    <img src="{{ url_for('static', filename='images/icon_loupe.png') }}"-->
-<!--                         alt="Search" style="width:20px; height:20px; object-fit:cover; cursor:pointer;">-->
-<!--                </a>-->
-<!--                <ul class="dropdown-menu p-2 dropdown-menu-start" style="min-width: 250px;">-->
-<!--                    <li>-->
-<!--                        <form class="d-flex" method="GET" action="{{ url_for('search') }}">-->
-<!--                            <input class="form-control form-control-sm me-2" type="text" name="q" placeholder="Tìm kiếm..." aria-label="Search">-->
-<!--                            <button class="btn btn-success btn-sm" type="submit">Tìm</button>-->
-<!--                        </form>-->
-<!--                    </li>-->
-<!--                </ul>-->
-<!--            </div>-->
-
-<!--            &lt;!&ndash; Dropdown Tài khoản &ndash;&gt;-->
-<!--            <div class="dropdown">-->
-<!--                <button class="btn btn-success btn-sm dropdown-toggle d-flex align-items-center gap-2"-->
-<!--                        type="button" data-bs-toggle="dropdown" aria-expanded="false">-->
-
-<!--                    <img src="{{ url_for('static', filename='images/icon_user.png') }}"-->
-<!--                         alt="User Icon" style="width:20px; height:20px; object-fit:cover; border-radius:50%;">-->
-
-<!--                    {% if session.get('user') %}-->
-<!--                        <strong>{{ session['user'] }}</strong>-->
-<!--                    {% else %}-->
-<!--                        Tài khoản-->
-<!--                    {% endif %}-->
-<!--                </button>-->
-
-<!--                <ul class="dropdown-menu dropdown-menu-end">-->
-<!--                    {% if session.get('user') %}-->
-<!--                        <li><span class="dropdown-item-text">Xin chào: <strong>{{ session['user'] }}</strong></span></li>-->
-<!--                        <li><hr class="dropdown-divider"></li>-->
-<!--                        <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">Đăng xuất</a></li>-->
-<!--                    {% else %}-->
-<!--                        <li><a class="dropdown-item" href="{{ url_for('login') }}">Đăng nhập</a></li>-->
-<!--                        <li><a class="dropdown-item" href="{{ url_for('register') }}">Đăng ký</a></li>-->
-<!--                    {% endif %}-->
-<!--                </ul>-->
-<!--            </div>-->
-<!--        </div>-->
-<!--    </div>-->
-<!--</header>-->
-
 
 <header class="bg-light shadow-sm ">
     <div class="container d-flex justify-content-between align-items-center">
@@ -110,96 +28,75 @@
             <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('dashboard') }}">Trang chủ</a>
 
             {% if session['role'] == RoleEnum.ADMIN.value %}
-                <!-- Bệnh nhân -->
-                <div class="dropdown me-3">
-                    <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                        Bệnh nhân
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('patients') }}">Danh sách bệnh nhân</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('add_patient') }}">Thêm bệnh nhân</a></li>
-                    </ul>
-                </div>
+            <!-- Bệnh nhân -->
+            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('patients') }}">Bệnh nhân</a>
 
-                <!-- Bác sĩ -->
-                <div class="dropdown me-3">
-                    <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                        Bác sĩ
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('doctors') }}">Danh sách bác sĩ</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('add_doctor') }}">Thêm bác sĩ</a></li>
-                    </ul>
-                </div>
+            <!-- Bác sĩ -->
+            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('doctors') }}">Bác sĩ</a>
 
-                <!-- Lịch hẹn -->
-                <div class="dropdown me-3">
-                    <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                        Lịch hẹn
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('appointments') }}">Tất cả lịch hẹn</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('add_appointment') }}">Tạo lịch hẹn mới</a></li>
-                    </ul>
-                </div>
+            <!-- Dịch vụ -->
+            <div class="dropdown me-3">
+                <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                    Dịch vụ
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('serviceTypes') }}">Loại dịch vụ</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('services') }}">Dịch vụ</a></li>
+                </ul>
+            </div>
 
-                <!-- Dịch vụ -->
-                <div class="dropdown me-3">
-                    <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                        Dịch vụ
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('services') }}">Danh sách dịch vụ</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('add_service') }}">Thêm dịch vụ</a></li>
-                    </ul>
-                </div>
 
-                <!-- Thuốc -->
-                <div class="dropdown me-3">
-                    <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                        Thuốc
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('medicine_types') }}">Loại thuốc</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('medicines') }}">Danh sách thuốc</a></li>
-                    </ul>
-                </div>
+            <!-- Lịch hẹn -->
+            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn</a>
 
-                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>
+            <!-- Thuốc -->
+            <div class="dropdown me-3">
+                <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                    Thuốc
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('medicineTypes') }}">Loại thuốc</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('medicines') }}">Danh sách thuốc</a></li>
+                </ul>
+            </div>
+
+            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>
 
             {% elif session['role'] == RoleEnum.DOCTOR.value %}
-                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn</a>
+            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('appointments') }}">Lịch hẹn</a>
 
-                <div class="dropdown me-3">
-                    <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                        Bệnh nhân
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('patients') }}">Danh sách bệnh nhân</a></li>
-                    </ul>
-                </div>
-
-                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>
+            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn</a>
 
             {% elif session['role'] == RoleEnum.PATIENT.value or session['role'] == RoleEnum.USER.value %}
-                <div class="dropdown me-3">
-                    <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                        Lịch hẹn
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('my_appointments') }}">Lịch hẹn của tôi</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('add_appointment') }}">Đặt lịch hẹn</a></li>
-                    </ul>
-                </div>
-                <div class="dropdown me-3">
-                    <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                        Bác sĩ
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('patient_doctors') }}">Danh sách bác sĩ</a></li>
-                    </ul>
-                </div>
-                <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn của tôi</a>
+            <!--                <div class="dropdown me-3">-->
+            <!--                    <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">-->
+            <!--                        Lịch hẹn-->
+            <!--                    </a>-->
+            <!--                    <ul class="dropdown-menu">-->
+            <!--                        <li><a class="dropdown-item" href="{{ url_for('my_appointments') }}">Lịch hẹn của tôi</a></li>-->
+            <!--                        <li><a class="dropdown-item" href="{{ url_for('add_appointment') }}">Đặt lịch hẹn</a></li>-->
+            <!--                    </ul>-->
+            <!--                </div>-->
+            {% if session['role'] == RoleEnum.PATIENT.value %}
+            <a class="text-dark me-3 mb-1 nav-link"
+               href="{{ url_for('appointments') }}">
+                Lịch hẹn
+            </a>
+            {% elif session['role'] == RoleEnum.USER.value %}
+            <a class="text-dark me-3 mb-1 nav-link"
+               href="{{ url_for('my_appointments') }}">
+                Lịch hẹn
+            </a>
+            {% endif %}
+            <div class="dropdown me-3">
+                <a class="text-dark mb-1 nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                    Bác sĩ
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('patient_doctors') }}">Danh sách bác sĩ</a></li>
+                </ul>
+            </div>
+            <a class="text-dark me-3 mb-1 nav-link" href="{{ url_for('bills') }}">Hóa đơn của tôi</a>
             {% endif %}
         </nav>
         {% endif %}
@@ -212,19 +109,21 @@
                     <img src="{{ url_for('static', filename='images/icon_user.png') }}"
                          alt="User Icon" style="width:20px; height:20px; object-fit:cover; border-radius:50%;">
                     {% if session.get('user') %}
-                        <strong>{{ session['user'] }}</strong>
+                    <strong>{{ session['user'] }}</strong>
                     {% else %}
-                        Tài khoản
+                    Tài khoản
                     {% endif %}
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     {% if session.get('user') %}
-                        <li><span class="dropdown-item-text">Xin chào: <strong>{{ session['user'] }}</strong></span></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">Đăng xuất</a></li>
+                    <li><span class="dropdown-item-text">Xin chào: <strong>{{ session['user'] }}</strong></span></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">Đăng xuất</a></li>
                     {% else %}
-                        <li><a class="dropdown-item" href="{{ url_for('login') }}">Đăng nhập</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('register') }}">Đăng ký</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('login') }}">Đăng nhập</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('register') }}">Đăng ký</a></li>
                     {% endif %}
                 </ul>
             </div>
@@ -233,17 +132,17 @@
 </header>
 
 <div class="container mt-3">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+</div>
 <main class="container">
     {% block content %}{% endblock %}
 </main>
@@ -251,26 +150,26 @@
 <footer class="py-4 mt-4" style="background-color: #198754; color: white;">
     <div class="container" style="background-color: transparent;">
         <div class="row">
-         <!-- Cột 1: Logo + icon mạng xã hội (canh giữa) -->
-<div class="col-md-3 d-flex flex-column align-items-center gap-2 mb-3">
-    <img src="{{ url_for('static', filename='images/icon_logo.png') }}"
-         alt="Logo" style="width:50px; height:50px; object-fit:cover;">
+            <!-- Cột 1: Logo + icon mạng xã hội (canh giữa) -->
+            <div class="col-md-3 d-flex flex-column align-items-center gap-2 mb-3">
+                <img src="{{ url_for('static', filename='images/icon_logo.png') }}"
+                     alt="Logo" style="width:50px; height:50px; object-fit:cover;">
 
-    <div class="d-flex gap-3 mt-2 justify-content-center">
-        <a href="#" class="text-white">
-            <img src="{{ url_for('static', filename='images/icon_facebook.png') }}"
-                 alt="Facebook" style="width:30px; height:30px; object-fit:cover;">
-        </a>
-        <a href="#" class="text-white">
-            <img src="{{ url_for('static', filename='images/icon_website.png') }}"
-                 alt="Website" style="width:30px; height:30px; object-fit:cover;">
-        </a>
-        <a href="#" class="text-white">
-            <img src="{{ url_for('static', filename='images/icon_zalo.png') }}"
-                 alt="Zalo" style="width:30px; height:30px; object-fit:cover;">
-        </a>
-    </div>
-</div>
+                <div class="d-flex gap-3 mt-2 justify-content-center">
+                    <a href="#" class="text-white">
+                        <img src="{{ url_for('static', filename='images/icon_facebook.png') }}"
+                             alt="Facebook" style="width:30px; height:30px; object-fit:cover;">
+                    </a>
+                    <a href="#" class="text-white">
+                        <img src="{{ url_for('static', filename='images/icon_website.png') }}"
+                             alt="Website" style="width:30px; height:30px; object-fit:cover;">
+                    </a>
+                    <a href="#" class="text-white">
+                        <img src="{{ url_for('static', filename='images/icon_zalo.png') }}"
+                             alt="Zalo" style="width:30px; height:30px; object-fit:cover;">
+                    </a>
+                </div>
+            </div>
 
 
             <!-- Cột 2 -->

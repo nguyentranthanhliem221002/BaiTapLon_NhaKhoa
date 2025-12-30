@@ -1,10 +1,8 @@
 {% extends "layouts/base.html" %}
 
 {% block content %}
-<h2>Danh sách lịch hẹn</h2>
-{% if session['role'] == RoleEnum.ADMIN.value or session['role'] == RoleEnum.PATIENT.value %}
-<a class="btn btn-success mb-3" href="{{ url_for('add_appointment') }}">+ Thêm lịch hẹn</a>
-{%endif%}
+<h2>Danh sách thuốc</h2>
+<a class="btn btn-success mb-3" href="{{ url_for('add_appointment_medicine', id=bill_id) }}">+ Thêm thuốc</a>
 
 <form method="GET" action="{{ url_for('appointments') }}" class="mb-3 row g-2">
     <div class="col-auto">
@@ -32,36 +30,21 @@
     <thead class="table-dark">
     <tr>
         <th>ID</th>
-        <th>Bệnh nhân</th>
-        <th>Bác sĩ</th>
-        <th>Thời gian</th>
-        <th>Mô tả</th>
+        <th>Tên thuốc</th>
+        <th>Số lượng</th>
+        <th>Số tiền</th>
         <th>Hành động</th>
     </tr>
     </thead>
     <tbody>
-    {% for a in appointments %}
+    {% for m in bill_medicines %}
     <tr>
-        <td>{{ a.id }}</td>
-        <td>{{ a.patient.name if a.patient else '' }}</td>
-        <td>{{ a.schedule.doctor.name if a.schedule and a.schedule.doctor else '' }}</td>
+        <td>{{ m.id }}</td>
+        <td>{{ m.medicine.name }}</td>
+        <td>{{ m.quantity }}</td>
+        <td>{{ m.price }}</td>
         <td>
-            {%- if a.schedule %}
-                {{ a.schedule.from_date.strftime('%H:%M') }} -
-                {{ a.schedule.to_date.strftime('%H:%M %d-%m-%Y') }}
-            {%- else %}
-                {{ '' }}
-            {%- endif %}
-        </td>
-        <td>{{ a.description }}</td>
-        <td>
-            <a class="btn btn-primary btn-sm" href="{{ url_for('edit_appointment', id=a.id) }}">Sửa</a>
-            <a class="btn btn-success btn-sm" href="{{ url_for('appointment_medicine', id=a.id) }}">Thuốc</a>
-            <a class="btn btn-success btn-sm" href="{{ url_for('edit_appointment', id=a.id) }}">Dịch vụ</a>
-            {% if session['role'] == RoleEnum.ADMIN.value %}
-                <a class="btn btn-danger btn-sm" href="{{ url_for('delete_appointment', id=a.id) }}" onclick="return confirm('Xóa lịch hẹn?')">Xóa</a>
-            {%endif%}
-
+            <a class="btn btn-primary btn-sm" href="{{ url_for('edit_appointment', id=m.id) }}">Sửa</a>
         </td>
     </tr>
     {% endfor %}

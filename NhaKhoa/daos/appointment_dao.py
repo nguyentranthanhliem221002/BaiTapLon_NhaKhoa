@@ -1,6 +1,8 @@
 from NhaKhoa.database.db import get_session
 from sqlalchemy.orm import joinedload
 from datetime import datetime
+
+from NhaKhoa.models.bill import Bill
 from NhaKhoa.models.doctor import Doctor
 from NhaKhoa.models.appointment import Appointment
 from NhaKhoa.models.patient import Patient

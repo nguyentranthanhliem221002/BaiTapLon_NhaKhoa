@@ -83,6 +83,7 @@ medicine_dao = MedicineDAO()
 medicineType_dao = MedicineTypeDAO()
 specialty_dao = SpecialtyDAO()
 schedule_dao = ScheduleDAO()
+bill_dao = BillDAO()
 
 @app.context_processor
 def inject_role_enum():
@@ -818,6 +819,30 @@ def edit_appointment(id):
         return redirect(url_for("appointments"))
     return render_template("appointment/appointment_edit.html", appointment=appointment, patients=patients, doctors=doctors)
 
+@app.route("/appointment/<int:id>/medicine", methods=["GET", "POST"])
+@login_required(RoleEnum.DOCTOR.value)
+def appointment_medicine(id):
+    bill_medicines = bill_dao.get_all_medicines_by_bill_id(id)
+    return render_template("appointment/medicine.html",
+                           bill_id=id,
+                           bill_medicines=bill_medicines)
+
+@app.route("/appointment/<int:id>/medicine/add", methods=["GET", "POST"])
+@login_required(RoleEnum.DOCTOR.value)
+def add_appointment_medicine(id):
+    medicines = medicine_dao.get_all_medicines()
+    if request.method == "POST":
+        # Get data from form
+        medicine_id = request.form.get("medicine_id", type=int)
+        quantity = request.form.get("quantity", 1, type=int)  # Default to 1 if not provided
+
+        # Add medicine to bill
+        bill_dao.add_bill_medicine(bill_id=id, medicine_id=medicine_id, quantity=quantity)
+
+        return redirect(url_for("appointment_medicine", id=id))
+
+    return render_template("appointment/medicine_add.html", id=id, medicines=medicines)
+
 @app.route("/appointment/delete/<int:id>")
 @login_required()
 def delete_appointment(id):
@@ -977,7 +1002,7 @@ def edit_medicine(id):
         medicine_dao.update_medicine(medicine)  # ✅ dùng DAO update
         flash("Cập nhật thuốc thành công!")
         return redirect(url_for("medicines"))
-    return render_template("medicine/medicine_edit.html", medicine=medicine, types=types)
+    return render_template("medicine/medicine.html", medicine=medicine, types=types)
 
 @app.route("/medicine/delete/<int:id>")
 @login_required(RoleEnum.ADMIN.value)

@@ -1,0 +1,36 @@
+{% extends "layouts/base.html" %}
+{% block title %}Thêm lịch hẹn{% endblock %}
+{% block content %}
+<div class="container mt-4" style="max-width: 600px;">
+    <h2 class="mb-4">Thêm thuốc</h2>
+
+    <form method="POST" action="{{ url_for('add_appointment_medicine', id=id) }}">
+
+        <div class="mb-3" >
+            <label for="medicine_id" class="form-label">Bệnh nhân</label>
+            <select class="form-select" id="medicine_id" name="medicine_id" required>
+                <option value="" selected>Chọn thuốc</option>
+                {% for medicine in medicines %}
+                <option value="{{ medicine.id }}">{{ medicine.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="quantity" class="form-label">Số lượng</label>
+            <input type="number" class="form-control" id="quantity" name="quantity"
+                   min="1" value="1" required>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+            <button type="submit" class="btn btn-primary">Thêm thuốc</button>
+            <a href="{{ url_for('appointment_medicine', id=id) }}" class="btn btn-secondary">Hủy</a>
+        </div>
+
+    </form>
+
+    {% if err %}
+    <div class="alert alert-danger mt-3">{{ err }}</div>
+    {% endif %}
+</div>
+{% endblock %}
