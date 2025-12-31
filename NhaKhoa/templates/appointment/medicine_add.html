@@ -7,7 +7,7 @@
     <form method="POST" action="{{ url_for('add_appointment_medicine', id=id) }}">
 
         <div class="mb-3" >
-            <label for="medicine_id" class="form-label">Bệnh nhân</label>
+            <label for="medicine_id" class="form-label">Tên thuốc</label>
             <select class="form-select" id="medicine_id" name="medicine_id" required>
                 <option value="" selected>Chọn thuốc</option>
                 {% for medicine in medicines %}

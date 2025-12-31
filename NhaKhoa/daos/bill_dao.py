@@ -123,6 +123,24 @@ class BillDAO:
             session.commit()
             return True
 
+    # def recalculate_total(self, bill_id: int) -> bool:
+    #     with get_session() as session:
+    #         bill = session.get(Bill, bill_id)
+    #         if not bill:
+    #             return False
+    #
+    #         total = 0.0
+    #         for bs in bill.bill_services:
+    #             if bs.service:
+    #                 total += bs.service.price * bs.quantity
+    #         for bm in bill.bill_medicines:
+    #             if bm.medicine:
+    #                 total += bm.medicine.price * bm.quantity
+    #
+    #         bill.total = total
+    #         session.commit()
+    #         return True
+
     def recalculate_total(self, bill_id: int) -> bool:
         with get_session() as session:
             bill = session.get(Bill, bill_id)
@@ -130,11 +148,13 @@ class BillDAO:
                 return False
 
             total = 0.0
+            # Tính tổng bill_services
             for bs in bill.bill_services:
-                if bs.service:
+                if bs.active and bs.service:
                     total += bs.service.price * bs.quantity
+            # Tính tổng bill_medicines
             for bm in bill.bill_medicines:
-                if bm.medicine:
+                if bm.active and bm.medicine:
                     total += bm.medicine.price * bm.quantity
 
             bill.total = total
